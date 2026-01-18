@@ -9,20 +9,26 @@ import (
 	"github.com/google/uuid"
 	"github.com/mikepersonal/speed-reader/backend/internal/auth"
 	"github.com/mikepersonal/speed-reader/backend/internal/documents"
+	"github.com/mikepersonal/speed-reader/backend/internal/logging"
 	"github.com/mikepersonal/speed-reader/backend/internal/sharing"
+	"golang.org/x/exp/slog"
 )
 
 // Handlers contains HTTP handlers for the API
 type Handlers struct {
 	docService     *documents.Service
 	sharingService *sharing.Service
+	logger         *slog.Logger
+	sanitizer      *logging.Sanitizer
 }
 
 // NewHandlers creates a new Handlers instance
-func NewHandlers(docService *documents.Service, sharingService *sharing.Service) *Handlers {
+func NewHandlers(docService *documents.Service, sharingService *sharing.Service, logger *slog.Logger, sanitizer *logging.Sanitizer) *Handlers {
 	return &Handlers{
 		docService:     docService,
 		sharingService: sharingService,
+		logger:         logger,
+		sanitizer:      sanitizer,
 	}
 }
 
@@ -68,8 +74,13 @@ func writeError(w http.ResponseWriter, status int, message string) {
 
 // CreateDocument handles POST /api/documents
 func (h *Handlers) CreateDocument(w http.ResponseWriter, r *http.Request) {
+	we := logging.WideEventFromContext(r.Context())
+
 	var req CreateDocumentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if we != nil {
+			we.AddError(err)
+		}
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -80,10 +91,26 @@ func (h *Handlers) CreateDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Log content metrics (sanitized)
+	if we != nil {
+		we.AddString("doc.title", h.sanitizer.DocumentTitle(req.Title))
+		we.AddInt("doc.content_length", len(req.Content))
+	}
+
 	doc, err := h.docService.CreateDocument(r.Context(), req.Title, req.Content)
 	if err != nil {
+		if we != nil {
+			we.AddError(err)
+		}
 		writeError(w, http.StatusInternalServerError, "failed to create document")
 		return
+	}
+
+	// Log document metrics
+	if we != nil {
+		we.AddString("doc.id", doc.ID.String())
+		we.AddInt("doc.token_count", doc.TokenCount)
+		we.AddInt("doc.chunk_count", doc.ChunkCount)
 	}
 
 	writeJSON(w, http.StatusCreated, doc)
@@ -91,6 +118,8 @@ func (h *Handlers) CreateDocument(w http.ResponseWriter, r *http.Request) {
 
 // GetDocument handles GET /api/documents/:id
 func (h *Handlers) GetDocument(w http.ResponseWriter, r *http.Request) {
+	we := logging.WideEventFromContext(r.Context())
+
 	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -98,8 +127,15 @@ func (h *Handlers) GetDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if we != nil {
+		we.AddString("doc.id", id.String())
+	}
+
 	doc, err := h.docService.GetDocument(r.Context(), id)
 	if err != nil {
+		if we != nil {
+			we.AddError(err)
+		}
 		writeError(w, http.StatusNotFound, "document not found")
 		return
 	}
@@ -109,6 +145,8 @@ func (h *Handlers) GetDocument(w http.ResponseWriter, r *http.Request) {
 
 // GetTokens handles GET /api/documents/:id/tokens
 func (h *Handlers) GetTokens(w http.ResponseWriter, r *http.Request) {
+	we := logging.WideEventFromContext(r.Context())
+
 	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -127,10 +165,22 @@ func (h *Handlers) GetTokens(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if we != nil {
+		we.AddString("doc.id", id.String())
+		we.AddInt("chunk.index", chunkIndex)
+	}
+
 	chunk, err := h.docService.GetTokens(r.Context(), id, chunkIndex)
 	if err != nil {
+		if we != nil {
+			we.AddError(err)
+		}
 		writeError(w, http.StatusNotFound, err.Error())
 		return
+	}
+
+	if we != nil {
+		we.AddInt("chunk.token_count", len(chunk.Tokens))
 	}
 
 	writeJSON(w, http.StatusOK, chunk)
@@ -156,6 +206,8 @@ func (h *Handlers) GetReadingState(w http.ResponseWriter, r *http.Request) {
 
 // UpdateReadingState handles PUT /api/documents/:id/reading-state
 func (h *Handlers) UpdateReadingState(w http.ResponseWriter, r *http.Request) {
+	we := logging.WideEventFromContext(r.Context())
+
 	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -165,6 +217,9 @@ func (h *Handlers) UpdateReadingState(w http.ResponseWriter, r *http.Request) {
 
 	var req UpdateReadingStateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if we != nil {
+			we.AddError(err)
+		}
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -176,7 +231,17 @@ func (h *Handlers) UpdateReadingState(w http.ResponseWriter, r *http.Request) {
 		ChunkSize:  req.ChunkSize,
 	}
 
+	// Log reading progress metrics
+	if we != nil {
+		we.AddString("doc.id", id.String())
+		we.AddInt("reading.token_index", req.TokenIndex)
+		we.AddInt("reading.wpm", req.WPM)
+	}
+
 	if err := h.docService.UpdateReadingState(r.Context(), state); err != nil {
+		if we != nil {
+			we.AddError(err)
+		}
 		writeError(w, http.StatusNotFound, "document not found")
 		return
 	}

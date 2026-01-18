@@ -6,7 +6,9 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/mikepersonal/speed-reader/backend/internal/auth"
 	"github.com/mikepersonal/speed-reader/backend/internal/documents"
+	"github.com/mikepersonal/speed-reader/backend/internal/logging"
 	"github.com/mikepersonal/speed-reader/backend/internal/sharing"
+	"golang.org/x/exp/slog"
 )
 
 // RouterDeps contains dependencies for the router
@@ -16,6 +18,8 @@ type RouterDeps struct {
 	SharingService *sharing.Service
 	FrontendURL    string
 	SecureCookie   bool
+	Logger         *slog.Logger
+	Sanitizer      *logging.Sanitizer
 }
 
 // NewRouter creates a new HTTP router with all routes configured
@@ -23,7 +27,7 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Global middleware
-	r.Use(middleware.Logger)
+	r.Use(logging.RequestLoggingMiddleware(deps.Logger, deps.Sanitizer))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RealIP)
 	r.Use(SecurityHeaders)
@@ -37,7 +41,7 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 	}))
 
 	// Handlers
-	docHandlers := NewHandlers(deps.DocService, deps.SharingService)
+	docHandlers := NewHandlers(deps.DocService, deps.SharingService, deps.Logger, deps.Sanitizer)
 	authHandlers := auth.NewHandlers(deps.AuthService, deps.FrontendURL, deps.SecureCookie)
 
 	// API routes

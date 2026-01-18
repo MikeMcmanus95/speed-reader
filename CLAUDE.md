@@ -47,8 +47,10 @@ User pastes text → Backend tokenizes → Tokens stored in chunks → Frontend 
 1. `internal/config` - Environment configuration, constants (MaxPasteSize=1MB, ChunkSize=5000)
 2. `internal/storage` - Token struct definition, ChunkStore for JSON file I/O
 3. `internal/tokenizer` - Text processing: normalization, sentence splitting, pivot calculation, pause multipliers
-4. `internal/documents` - Repository (PostgreSQL CRUD) + Service (orchestrates tokenization and storage)
-5. `internal/http` - Chi router, handlers, middleware
+4. `internal/telemetry` - OpenTelemetry initialization (tracing)
+5. `internal/logging` - Structured logging, middleware, wide events, PII sanitization
+6. `internal/documents` - Repository (PostgreSQL CRUD) + Service (orchestrates tokenization and storage)
+7. `internal/http` - Chi router, handlers, middleware
 
 **API Endpoints**:
 - `POST /api/documents` - Create document (tokenizes text, writes chunks)
@@ -158,6 +160,61 @@ Environment variables (see `backend/.env.example`):
 - `STORAGE_PATH` (default: ./data)
 
 Frontend proxies `/api` to `localhost:8080` via Vite config.
+
+## Observability
+
+### Structured Logging
+
+The backend uses structured logging with slog (via `golang.org/x/exp/slog` for Go 1.20 compatibility).
+
+**Packages:**
+- `internal/logging` - Logger setup, middleware, wide events, PII sanitization
+- `internal/telemetry` - OpenTelemetry initialization
+
+**Log Levels:**
+- `debug` - Detailed debugging info (not for production)
+- `info` - Normal operations (request completed, service started)
+- `warn` - Recoverable issues (4xx errors, rate limiting)
+- `error` - Unrecoverable issues (5xx errors, connection failures)
+
+**Wide Events Pattern:**
+Request handlers accumulate metrics in a `WideEvent` and emit a single log at request end:
+```go
+we := logging.WideEventFromContext(r.Context())
+we.AddString("doc.id", id.String())
+we.AddInt("doc.token_count", doc.TokenCount)
+we.AddDuration("db_query", queryTime)
+// Emitted automatically by middleware at request end
+```
+
+**PII Sanitization:**
+NEVER log PII in plaintext. Use the Sanitizer:
+```go
+sanitizer.UserID(userID)       // "user_a1b2c3d4"
+sanitizer.Email(email)         // "f8e9d0c1@gmail.com"
+sanitizer.IPAddress(ip)        // "192.168.x.x"
+sanitizer.DocumentTitle(title) // Truncated to 50 chars
+```
+
+### Observability Stack
+
+Start the observability stack:
+```bash
+make observability-up   # Start Jaeger, Loki, Grafana
+make observability-down # Stop all services
+```
+
+**UIs:**
+- Grafana: http://localhost:3001 (admin/admin) - Dashboards for logs and traces
+- Jaeger: http://localhost:16686 - Distributed tracing
+
+**Environment Variables:**
+```bash
+LOG_LEVEL=info              # debug, info, warn, error
+LOG_SALT=change-in-prod     # Salt for PII pseudonymization
+OTLP_ENDPOINT=localhost:4317 # OTLP gRPC endpoint (empty=stdout)
+ENVIRONMENT=development     # development, staging, production
+```
 
 ## Performance Targets
 

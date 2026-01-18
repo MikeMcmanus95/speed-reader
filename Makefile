@@ -1,4 +1,4 @@
-.PHONY: all build run test clean dev db-up db-down frontend backend
+.PHONY: all build run test clean dev db-up db-down frontend backend observability-up observability-down observability-logs
 
 # Default target
 all: build
@@ -63,3 +63,17 @@ deps-frontend:
 # Run with production build
 run: build db-up
 	./backend/bin/api
+
+# Observability stack commands
+observability-up:
+	docker-compose -f docker-compose.observability.yml up -d
+	@echo "Observability stack started:"
+	@echo "  Grafana:  http://localhost:3001 (admin/admin)"
+	@echo "  Jaeger:   http://localhost:16686"
+	@echo "  Loki:     http://localhost:3100"
+
+observability-down:
+	docker-compose -f docker-compose.observability.yml down
+
+observability-logs:
+	docker-compose -f docker-compose.observability.yml logs -f
