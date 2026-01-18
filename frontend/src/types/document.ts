@@ -27,3 +27,13 @@ export interface UpdateReadingStateRequest {
   wpm: number;
   chunkSize: number;
 }
+
+export interface DocumentWithProgress extends Document {
+  tokenIndex: number;
+  wpm: number;
+  updatedAt: string;
+}
+
+export interface UpdateDocumentRequest {
+  title: string;
+}

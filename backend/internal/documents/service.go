@@ -119,3 +119,13 @@ func (s *Service) DeleteDocument(ctx context.Context, id uuid.UUID) error {
 	// Delete chunk files
 	return s.chunkStore.DeleteDocument(id.String())
 }
+
+// ListDocuments retrieves all documents with their reading progress
+func (s *Service) ListDocuments(ctx context.Context) ([]DocumentWithProgress, error) {
+	return s.repo.List(ctx)
+}
+
+// UpdateDocumentTitle updates the title of a document
+func (s *Service) UpdateDocumentTitle(ctx context.Context, id uuid.UUID, title string) error {
+	return s.repo.UpdateTitle(ctx, id, title)
+}

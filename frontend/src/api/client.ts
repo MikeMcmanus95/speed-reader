@@ -47,3 +47,16 @@ export async function put<T, B>(url: string, body: B): Promise<T> {
   });
   return handleResponse<T>(response);
 }
+
+export async function del(url: string): Promise<void> {
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new ApiError(error.error || 'Request failed', response.status);
+  }
+}
