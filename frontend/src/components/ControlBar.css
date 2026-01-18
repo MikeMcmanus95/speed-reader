@@ -1,0 +1,105 @@
+.control-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1rem 2rem;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.play-pause-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  background-color: #1976d2;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.play-pause-button:hover {
+  background-color: #1565c0;
+}
+
+.play-pause-button:active {
+  background-color: #0d47a1;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.control-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.control-label-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.wpm-slider {
+  width: 120px;
+  accent-color: #1976d2;
+}
+
+.control-value {
+  min-width: 3rem;
+  font-family: 'SF Mono', monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.chunk-toggle {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.chunk-button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chunk-button:hover {
+  border-color: #1976d2;
+  color: #1976d2;
+}
+
+.chunk-button.active {
+  background-color: #1976d2;
+  border-color: #1976d2;
+  color: white;
+}
+
+@media (max-width: 600px) {
+  .control-bar {
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .wpm-slider {
+    width: 80px;
+  }
+}

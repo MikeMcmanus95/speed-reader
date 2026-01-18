@@ -1,0 +1,7 @@
+CREATE TABLE reading_state (
+    doc_id UUID PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
+    token_index INT NOT NULL DEFAULT 0,
+    wpm INT NOT NULL DEFAULT 300,
+    chunk_size INT NOT NULL DEFAULT 1,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
