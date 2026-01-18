@@ -1,11 +1,74 @@
-import React from 'react';
+import React, { useRef, useLayoutEffect, useState, useCallback } from 'react';
 import type { Token } from '../types';
 
 interface RSVPDisplayProps {
   tokens: Token[];
 }
 
+// Singleton canvas for text measurements (avoids memory leak from repeated canvas creation)
+let measurementCanvas: HTMLCanvasElement | null = null;
+
+/**
+ * Measures the rendered width of text given a computed font string.
+ * Uses canvas context for accurate proportional font measurements.
+ */
+function measureTextWidth(text: string, font: string): number {
+  if (!measurementCanvas) {
+    measurementCanvas = document.createElement('canvas');
+  }
+  const context = measurementCanvas.getContext('2d');
+  if (!context) return 0;
+  context.font = font;
+  return context.measureText(text).width;
+}
+
 export const RSVPDisplay = React.memo(function RSVPDisplay({ tokens }: RSVPDisplayProps) {
+  const wordRef = useRef<HTMLDivElement>(null);
+  const [pivotOffset, setPivotOffset] = useState<number>(0);
+
+  // Only process single-word mode
+  const token = tokens.length === 1 ? tokens[0] : null;
+
+  // Calculate offset to center pivot character on focus line
+  const calculateOffset = useCallback(() => {
+    if (!token || !wordRef.current) {
+      setPivotOffset(0);
+      return;
+    }
+
+    const { text, pivot } = token;
+    const before = text.slice(0, pivot);
+    const pivotChar = text[pivot] || '';
+
+    // Get computed font from the word element
+    const computedStyle = window.getComputedStyle(wordRef.current);
+    const font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+
+    // Measure widths
+    const beforeWidth = before ? measureTextWidth(before, font) : 0;
+    const pivotWidth = pivotChar ? measureTextWidth(pivotChar, font) : 0;
+    const totalWidth = measureTextWidth(text, font);
+
+    // The word is centered by flexbox, so its center is at screen center.
+    // We need to shift so the pivot character's center aligns with screen center.
+    // Pivot center is at: beforeWidth + pivotWidth/2 from left edge
+    // Word center is at: totalWidth/2 from left edge
+    // Shift needed: (totalWidth/2) - (beforeWidth + pivotWidth/2)
+    const pivotCenterFromLeft = beforeWidth + (pivotWidth / 2);
+    const wordCenter = totalWidth / 2;
+    const offset = wordCenter - pivotCenterFromLeft;
+    setPivotOffset(offset);
+  }, [token]);
+
+  // Measure and calculate pivot offset, also handle window resize for responsive text
+  useLayoutEffect(() => {
+    calculateOffset();
+
+    // Recalculate on resize to handle responsive font size changes (md: breakpoint)
+    window.addEventListener('resize', calculateOffset);
+    return () => window.removeEventListener('resize', calculateOffset);
+  }, [calculateOffset]);
+
   if (tokens.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[200px] p-8 relative">
@@ -24,9 +87,9 @@ export const RSVPDisplay = React.memo(function RSVPDisplay({ tokens }: RSVPDispl
           data-testid="rsvp-chunk"
           className="text-2xl md:text-4xl font-rsvp font-medium tracking-wide whitespace-nowrap"
         >
-          {tokens.map((token, idx) => (
+          {tokens.map((tkn, idx) => (
             <span key={idx} className="text-text-primary">
-              {token.text}
+              {tkn.text}
               {idx < tokens.length - 1 && ' '}
             </span>
           ))}
@@ -36,17 +99,18 @@ export const RSVPDisplay = React.memo(function RSVPDisplay({ tokens }: RSVPDispl
   }
 
   // Single word with pivot highlighting
-  const token = tokens[0];
-  const { text, pivot } = token;
-
-  // Split word into before, pivot character, and after
+  const { text, pivot } = token!;
   const before = text.slice(0, pivot);
   const pivotChar = text[pivot] || '';
   const after = text.slice(pivot + 1);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[200px] p-8 relative">
-      <div className="text-3xl md:text-5xl font-rsvp font-medium tracking-wide whitespace-nowrap">
+      <div
+        ref={wordRef}
+        className="text-3xl md:text-5xl font-rsvp font-medium tracking-wide whitespace-nowrap"
+        style={{ transform: `translateX(${pivotOffset}px)` }}
+      >
         <span data-testid="rsvp-before" className="text-text-primary">{before}</span>
         <span
           data-testid="rsvp-pivot"
