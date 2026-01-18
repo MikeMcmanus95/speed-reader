@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, LogIn, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -8,6 +8,21 @@ import { cn } from '@/lib/utils';
 export function UserMenu() {
   const { user, isLoading, login, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside - uses document listener to work across stacking contexts
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
 
   if (isLoading) {
     return (
@@ -30,7 +45,7 @@ export function UserMenu() {
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={menuRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
@@ -68,15 +83,7 @@ export function UserMenu() {
 
       <AnimatePresence>
         {isOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40"
-              onClick={() => setIsOpen(false)}
-            />
-            <motion.div
+          <motion.div
               initial={{ opacity: 0, y: -8, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.95 }}
@@ -152,8 +159,7 @@ export function UserMenu() {
                   </button>
                 )}
               </div>
-            </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

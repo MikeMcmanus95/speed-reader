@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Library } from 'lucide-react';
 import { createDocument } from '../api';
 import { Button } from '@/components/ui/button';
@@ -107,15 +107,6 @@ export function PasteInputView() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2, ease: 'easeOut' }}
               >
-                <Input
-                  type="text"
-                  placeholder="Document title (optional)"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  disabled={isSubmitting}
-                  className="h-12 text-base"
-                />
-
                 <div className="relative">
                   <Textarea
                     placeholder="Paste your text here..."
@@ -137,6 +128,26 @@ export function PasteInputView() {
                     {sizeDisplay} / {maxSizeDisplay}
                   </div>
                 </div>
+
+                <AnimatePresence>
+                  {content.trim() && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                    >
+                      <Input
+                        type="text"
+                        placeholder="Document title (optional)"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        disabled={isSubmitting}
+                        className="h-12 text-base"
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {error && (
                   <motion.div
