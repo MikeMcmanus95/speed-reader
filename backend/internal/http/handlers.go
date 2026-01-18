@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
+	"unicode"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -72,6 +74,34 @@ func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, ErrorResponse{Error: message})
 }
 
+// generateTitleFromContent creates a title from the first few words of content
+func generateTitleFromContent(content string, maxWords int) string {
+	// Split content into words
+	words := strings.FieldsFunc(content, func(r rune) bool {
+		return unicode.IsSpace(r)
+	})
+
+	if len(words) == 0 {
+		return "Untitled Document"
+	}
+
+	// Take up to maxWords
+	if len(words) > maxWords {
+		words = words[:maxWords]
+	}
+
+	title := strings.Join(words, " ")
+
+	// Truncate if too long (max 100 chars)
+	if len(title) > 100 {
+		title = title[:97] + "..."
+	} else if len(words) == maxWords {
+		title += "..."
+	}
+
+	return title
+}
+
 // CreateDocument handles POST /api/documents
 func (h *Handlers) CreateDocument(w http.ResponseWriter, r *http.Request) {
 	we := logging.WideEventFromContext(r.Context())
@@ -91,13 +121,19 @@ func (h *Handlers) CreateDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Auto-generate title from content if not provided
+	title := strings.TrimSpace(req.Title)
+	if title == "" {
+		title = generateTitleFromContent(req.Content, 6)
+	}
+
 	// Log content metrics (sanitized)
 	if we != nil {
-		we.AddString("doc.title", h.sanitizer.DocumentTitle(req.Title))
+		we.AddString("doc.title", h.sanitizer.DocumentTitle(title))
 		we.AddInt("doc.content_length", len(req.Content))
 	}
 
-	doc, err := h.docService.CreateDocument(r.Context(), req.Title, req.Content)
+	doc, err := h.docService.CreateDocument(r.Context(), title, req.Content)
 	if err != nil {
 		if we != nil {
 			we.AddError(err)
