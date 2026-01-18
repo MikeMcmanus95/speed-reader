@@ -27,7 +27,7 @@ export function PasteInputView() {
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim() || isOverLimit || isSubmitting) return;
+    if (!content.trim() || isOverLimit || isSubmitting) return;
 
     setIsSubmitting(true);
     setError(null);
@@ -99,11 +99,10 @@ export function PasteInputView() {
             >
               <Input
                 type="text"
-                placeholder="Document title"
+                placeholder="Document title (optional)"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 disabled={isSubmitting}
-                required
                 className="h-12 text-base"
               />
 
@@ -141,7 +140,7 @@ export function PasteInputView() {
 
               <Button
                 type="submit"
-                disabled={!title.trim() || !content.trim() || isOverLimit || isSubmitting}
+                disabled={!content.trim() || isOverLimit || isSubmitting}
                 size="lg"
                 className="h-12 text-lg font-semibold"
               >

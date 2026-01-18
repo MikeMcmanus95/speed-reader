@@ -117,3 +117,58 @@ func TestUpdateReadingStateRequest_JSON(t *testing.T) {
 		t.Errorf("expected chunkSize 2, got %d", req.ChunkSize)
 	}
 }
+
+func TestGenerateTitleFromContent(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		maxWords int
+		want     string
+	}{
+		{
+			name:     "short content",
+			content:  "Hello world",
+			maxWords: 6,
+			want:     "Hello world",
+		},
+		{
+			name:     "exactly max words",
+			content:  "One two three four five six",
+			maxWords: 6,
+			want:     "One two three four five six...",
+		},
+		{
+			name:     "more than max words",
+			content:  "One two three four five six seven eight nine ten",
+			maxWords: 6,
+			want:     "One two three four five six...",
+		},
+		{
+			name:     "empty content",
+			content:  "",
+			maxWords: 6,
+			want:     "Untitled Document",
+		},
+		{
+			name:     "whitespace only",
+			content:  "   \n\t  ",
+			maxWords: 6,
+			want:     "Untitled Document",
+		},
+		{
+			name:     "single word",
+			content:  "Hello",
+			maxWords: 6,
+			want:     "Hello",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := generateTitleFromContent(tt.content, tt.maxWords)
+			if got != tt.want {
+				t.Errorf("generateTitleFromContent() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
