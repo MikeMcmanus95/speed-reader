@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  - name: 'Speed Reader Dashboards'
+    orgId: 1
+    folder: 'Speed Reader'
+    folderUid: speedreader
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

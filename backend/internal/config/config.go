@@ -31,6 +31,15 @@ type Config struct {
 	FrontendURL        string
 	GuestDocTTLDays    int
 	SecureCookie       bool
+
+	// Observability configuration
+	LogLevel    string // debug, info, warn, error
+	LogSalt     string // secret for PII pseudonymization
+	OTLPEndpoint string // OTLP gRPC endpoint (empty = stdout)
+	NodeID      string // instance identifier
+	Version     string // app version
+	Environment string // development, staging, production
+	ServiceName string // service name for tracing
 }
 
 // Load reads configuration from environment variables
@@ -54,6 +63,15 @@ func Load() *Config {
 		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
 		GuestDocTTLDays:    guestTTL,
 		SecureCookie:       secureCookie,
+
+		// Observability
+		LogLevel:     getEnv("LOG_LEVEL", "info"),
+		LogSalt:      getEnv("LOG_SALT", "dev-log-salt-change-in-production"),
+		OTLPEndpoint: getEnv("OTLP_ENDPOINT", ""),
+		NodeID:       getEnv("NODE_ID", "local"),
+		Version:      getEnv("APP_VERSION", "dev"),
+		Environment:  getEnv("ENVIRONMENT", "development"),
+		ServiceName:  getEnv("SERVICE_NAME", "speedreader-api"),
 	}
 }
 
