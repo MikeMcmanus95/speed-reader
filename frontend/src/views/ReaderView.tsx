@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { RSVPDisplay, ControlBar, ProgressBar } from '../components';
 import { RSVPEngine, type RSVPConfig } from '../engine/RSVPEngine';
 import { getDocument, getTokens, getReadingState, updateReadingState } from '../api';
 import type { Document, Token } from '../types';
-import './ReaderView.css';
+import { Button } from '@/components/ui/button';
 
 const TOKENS_PER_CHUNK = 5000;
 const SAVE_INTERVAL = 5000; // 5 seconds
@@ -197,37 +198,52 @@ export function ReaderView() {
 
   if (loading) {
     return (
-      <div className="reader-view">
-        <div className="reader-loading">Loading...</div>
+      <div className="flex flex-col min-h-screen bg-neutral-50">
+        <div className="flex flex-col items-center justify-center flex-1 gap-4 text-neutral-600">
+          Loading...
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="reader-view">
-        <div className="reader-error">
-          <p>{error}</p>
-          <button onClick={() => navigate('/')}>Go Back</button>
+      <div className="flex flex-col min-h-screen bg-neutral-50">
+        <div className="flex flex-col items-center justify-center flex-1 gap-4">
+          <p className="text-accent-500 text-lg">{error}</p>
+          <Button
+            onClick={() => navigate('/')}
+            className="bg-primary-700 hover:bg-primary-800"
+          >
+            Go Back
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="reader-view">
-      <header className="reader-header">
-        <button className="back-button" onClick={() => navigate('/')}>
-          ← Back
-        </button>
-        <h1 className="document-title">{document?.title}</h1>
+    <div className="flex flex-col min-h-screen bg-neutral-50">
+      <header className="flex items-center gap-4 px-4 md:px-8 py-4 bg-white border-b border-neutral-200">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate('/')}
+          className="gap-2 text-neutral-600 hover:text-primary-700 hover:border-primary-700"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
+        <h1 className="flex-1 text-lg md:text-xl font-semibold text-neutral-800 truncate">
+          {document?.title}
+        </h1>
       </header>
 
-      <main className="reader-main">
+      <main className="flex-1 flex items-center justify-center p-4 md:p-8 bg-white">
         <RSVPDisplay tokens={currentTokens} />
       </main>
 
-      <footer className="reader-footer">
+      <footer className="flex flex-col gap-4 p-4 md:px-8 md:py-6 bg-white border-t border-neutral-200">
         <ProgressBar
           current={position}
           total={document?.tokenCount || 0}
