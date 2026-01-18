@@ -9,13 +9,22 @@ import (
 
 	_ "github.com/lib/pq"
 
+	"github.com/joho/godotenv"
+	"github.com/mikepersonal/speed-reader/backend/internal/auth"
 	"github.com/mikepersonal/speed-reader/backend/internal/config"
 	"github.com/mikepersonal/speed-reader/backend/internal/documents"
 	httpHandler "github.com/mikepersonal/speed-reader/backend/internal/http"
+	"github.com/mikepersonal/speed-reader/backend/internal/sharing"
 	"github.com/mikepersonal/speed-reader/backend/internal/storage"
 )
 
 func main() {
+	// Load environment variables
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+
 	// Load configuration
 	cfg := config.Load()
 
@@ -37,13 +46,29 @@ func main() {
 		log.Fatalf("Failed to create storage directory: %v", err)
 	}
 
-	// Initialize services
+	// Initialize auth services
+	authRepo := auth.NewRepository(db)
+	jwtManager := auth.NewJWTManager(cfg.JWTSecret)
+	csrfManager := auth.NewCSRFManager(cfg.CSRFSecret)
+	googleOAuth := auth.NewGoogleOAuth(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL)
+	authService := auth.NewService(authRepo, jwtManager, csrfManager, googleOAuth)
+
+	// Initialize document services
 	chunkStore := storage.NewChunkStore(cfg.StoragePath)
 	docRepo := documents.NewRepository(db)
-	docService := documents.NewService(docRepo, chunkStore)
+	docService := documents.NewService(docRepo, chunkStore, cfg.GuestDocTTLDays)
 
-	// Create router
-	router := httpHandler.NewRouter(docService)
+	// Initialize sharing service
+	sharingService := sharing.NewService(db, cfg.FrontendURL)
+
+	// Create router with all dependencies
+	router := httpHandler.NewRouter(&httpHandler.RouterDeps{
+		DocService:     docService,
+		AuthService:    authService,
+		SharingService: sharingService,
+		FrontendURL:    cfg.FrontendURL,
+		SecureCookie:   cfg.SecureCookie,
+	})
 
 	// Start server
 	addr := fmt.Sprintf(":%s", cfg.Port)

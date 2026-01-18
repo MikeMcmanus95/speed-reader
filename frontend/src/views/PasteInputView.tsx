@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { UserMenu } from '../components/UserMenu';
 import { cn } from '@/lib/utils';
 
 const MAX_SIZE = 1024 * 1024; // 1MB
@@ -41,9 +42,15 @@ export function PasteInputView() {
   }, [title, content, isOverLimit, isSubmitting, navigate]);
 
   return (
-    <div className="min-h-screen bg-warm-gradient bg-grain flex items-center justify-center p-4 md:p-8">
-      <div className="max-w-2xl w-full relative z-10">
-        <Card className="border border-border bg-bg-elevated/95 backdrop-blur-sm shadow-2xl shadow-black/30">
+    <div className="min-h-screen bg-warm-gradient bg-grain flex flex-col">
+      {/* Header with UserMenu */}
+      <header className="fixed top-0 right-0 z-20 p-4">
+        <UserMenu />
+      </header>
+
+      <div className="flex-1 flex items-center justify-center p-4 md:p-8">
+        <div className="max-w-2xl w-full relative z-10">
+          <Card className="border border-border bg-bg-elevated/95 backdrop-blur-sm shadow-2xl shadow-black/30">
           <CardHeader className="text-center pb-6">
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -143,6 +150,7 @@ export function PasteInputView() {
             </motion.form>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

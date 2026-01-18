@@ -1,7 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Share2 } from 'lucide-react';
 import { RSVPDisplay, ControlBar, ProgressBar } from '../components';
+import { UserMenu } from '../components/UserMenu';
+import { ShareModal } from '../components/ShareModal';
 import { RSVPEngine, type RSVPConfig } from '../engine/RSVPEngine';
 import { getDocument, getTokens, getReadingState, updateReadingState } from '../api';
 import type { Document, Token } from '../types';
@@ -23,6 +25,7 @@ function ReaderView() {
   const [config, setConfig] = useState<RSVPConfig>({ wpm: 300, chunkSize: 1 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const engineRef = useRef<RSVPEngine | null>(null);
   const lastSaveRef = useRef<number>(0);
@@ -245,7 +248,26 @@ function ReaderView() {
         <h1 className="flex-1 text-lg md:text-xl font-semibold text-text-primary truncate">
           {document?.title}
         </h1>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsShareModalOpen(true)}
+          className="gap-2 text-text-secondary hover:text-amber-400 hover:bg-bg-surface"
+        >
+          <Share2 className="w-4 h-4" />
+          <span className="hidden sm:inline">Share</span>
+        </Button>
+        <UserMenu />
       </header>
+
+      {document && (
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          documentId={document.id}
+          documentTitle={document.title}
+        />
+      )}
 
       <main className="flex-1 flex items-center justify-center p-4 md:p-8">
         <RSVPDisplay tokens={currentTokens} />
