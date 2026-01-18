@@ -1,4 +1,5 @@
 import { Play, Pause } from 'lucide-react';
+import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -21,22 +22,34 @@ export function ControlBar({
   onChunkSizeChange,
 }: ControlBarProps) {
   return (
-    <div className="flex items-center justify-center gap-8 p-4 md:px-8 bg-neutral-100 rounded-lg flex-wrap">
-      <Button
-        size="icon"
-        onClick={onPlayPause}
-        aria-label={isPlaying ? 'Pause' : 'Play'}
-        className="w-12 h-12 rounded-full bg-primary-700 hover:bg-primary-800 active:bg-primary-900"
+    <div className="flex items-center justify-center gap-8 p-4 md:px-8 bg-bg-surface rounded-xl flex-wrap">
+      <motion.div
+        whileTap={{ scale: 0.95 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 17 }}
       >
-        {isPlaying ? (
-          <Pause className="w-6 h-6" />
-        ) : (
-          <Play className="w-6 h-6" />
-        )}
-      </Button>
+        <Button
+          size="icon"
+          onClick={onPlayPause}
+          aria-label={isPlaying ? 'Pause' : 'Play'}
+          className="w-14 h-14 rounded-full bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-bg-deep shadow-[0_0_16px_rgba(240,166,35,0.3)] hover:shadow-[0_0_24px_rgba(240,166,35,0.5)] transition-shadow"
+        >
+          <motion.div
+            key={isPlaying ? 'pause' : 'play'}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+          >
+            {isPlaying ? (
+              <Pause className="w-6 h-6" />
+            ) : (
+              <Play className="w-6 h-6 ml-0.5" />
+            )}
+          </motion.div>
+        </Button>
+      </motion.div>
 
       <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-neutral-600 uppercase tracking-wide">
+        <span className="text-xs font-counter font-medium text-text-tertiary uppercase tracking-widest">
           WPM
         </span>
         <Slider
@@ -47,13 +60,13 @@ export function ControlBar({
           onValueChange={([value]) => onWpmChange(value)}
           className="w-24 md:w-32"
         />
-        <span className="min-w-12 font-mono text-sm font-semibold text-neutral-800">
+        <span className="min-w-12 font-counter text-sm font-semibold text-amber-400 tabular-nums">
           {wpm}
         </span>
       </div>
 
       <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-neutral-600 uppercase tracking-wide">
+        <span className="text-xs font-counter font-medium text-text-tertiary uppercase tracking-widest">
           Words
         </span>
         <ToggleGroup
@@ -66,7 +79,7 @@ export function ControlBar({
             <ToggleGroupItem
               key={size}
               value={String(size)}
-              className="w-8 h-8 text-sm font-medium data-[state=on]:bg-primary-700 data-[state=on]:text-white data-[state=on]:border-primary-700"
+              className="w-8 h-8 text-sm font-counter font-medium"
             >
               {size}
             </ToggleGroupItem>

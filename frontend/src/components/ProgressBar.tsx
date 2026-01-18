@@ -33,20 +33,20 @@ export function ProgressBar({ current, total, onSeek }: ProgressBarProps) {
   return (
     <div className="w-full px-4">
       <div
-        className="relative h-2 bg-neutral-200 rounded-md cursor-pointer overflow-visible group"
+        className="relative h-2 bg-bg-surface rounded-full cursor-pointer overflow-visible group"
         ref={progressRef}
         onClick={handleClick}
       >
         <div
-          className="h-full bg-primary-700 rounded-md transition-[width] duration-100 ease-out group-hover:bg-primary-800"
+          className="h-full bg-amber-500 rounded-full transition-[width] duration-100 ease-out group-hover:bg-amber-400"
           style={{ width: `${progress}%` }}
         />
         <div
-          className="absolute top-1/2 w-4 h-4 bg-primary-700 border-2 border-white rounded-full -translate-x-1/2 -translate-y-1/2 shadow-md pointer-events-none group-hover:bg-primary-800 group-hover:scale-110 transition-transform"
+          className="absolute top-1/2 w-4 h-4 bg-amber-400 border-2 border-bg-deep rounded-full -translate-x-1/2 -translate-y-1/2 shadow-[0_0_8px_rgba(240,166,35,0.4)] pointer-events-none group-hover:shadow-[0_0_12px_rgba(240,166,35,0.6)] group-hover:scale-110 transition-all"
           style={{ left: `${progress}%` }}
         />
       </div>
-      <div className="mt-2 text-center text-sm font-mono text-neutral-600">
+      <div className="mt-2 text-center text-sm font-counter text-text-tertiary">
         {formatProgress()}
       </div>
     </div>

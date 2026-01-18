@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { createDocument } from '../api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,70 +40,92 @@ export function PasteInputView() {
   }, [title, content, isOverLimit, isSubmitting, navigate]);
 
   return (
-    <div className="max-w-3xl mx-auto p-4 md:p-8">
-      <Card className="border-0 shadow-none bg-transparent">
-        <CardHeader className="text-center pb-8">
-          <CardTitle className="text-3xl md:text-4xl font-bold text-primary-700">
-            Speed Reader
-          </CardTitle>
-          <CardDescription className="text-neutral-600 text-base">
-            Paste your text below to start reading
-          </CardDescription>
-        </CardHeader>
+    <div className="min-h-screen bg-warm-gradient bg-grain flex items-center justify-center p-4 md:p-8">
+      <div className="max-w-2xl w-full relative z-10">
+        <Card className="border border-border bg-bg-elevated/95 backdrop-blur-sm shadow-2xl shadow-black/30">
+          <CardHeader className="text-center pb-6">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+            >
+              <CardTitle className="text-4xl md:text-5xl font-serif font-semibold bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 bg-clip-text text-transparent">
+                Speed Reader
+              </CardTitle>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1, ease: 'easeOut' }}
+            >
+              <CardDescription className="text-text-secondary text-base mt-2 font-serif italic">
+                Paste your text below to begin
+              </CardDescription>
+            </motion.div>
+          </CardHeader>
 
-        <CardContent>
-          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-            <Input
-              type="text"
-              placeholder="Document title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={isSubmitting}
-              required
-              className="h-12 text-base border-2 border-neutral-200 focus-visible:border-primary-700 focus-visible:ring-0"
-            />
-
-            <div className="relative">
-              <Textarea
-                placeholder="Paste your text here..."
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
+          <CardContent>
+            <motion.form
+              className="flex flex-col gap-5"
+              onSubmit={handleSubmit}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2, ease: 'easeOut' }}
+            >
+              <Input
+                type="text"
+                placeholder="Document title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 disabled={isSubmitting}
                 required
-                className={cn(
-                  "min-h-[300px] md:min-h-[400px] text-base leading-relaxed border-2 resize-y",
-                  isOverLimit
-                    ? "border-accent-500 focus-visible:border-accent-500"
-                    : "border-neutral-200 focus-visible:border-primary-700",
-                  "focus-visible:ring-0"
-                )}
+                className="h-12 text-base"
               />
-              <div
-                className={cn(
-                  "absolute bottom-3 right-3 text-xs font-mono px-2 py-1 rounded bg-white",
-                  isOverLimit ? "text-accent-500 font-semibold" : "text-neutral-400"
-                )}
+
+              <div className="relative">
+                <Textarea
+                  placeholder="Paste your text here..."
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  disabled={isSubmitting}
+                  required
+                  className={cn(
+                    "min-h-[280px] md:min-h-[360px] text-base leading-relaxed resize-y",
+                    isOverLimit && "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30"
+                  )}
+                />
+                <div
+                  className={cn(
+                    "absolute bottom-3 right-3 text-xs font-counter px-2 py-1 rounded bg-bg-elevated/90",
+                    isOverLimit ? "text-destructive font-semibold" : "text-text-tertiary"
+                  )}
+                >
+                  {sizeDisplay} / 1 MB
+                </div>
+              </div>
+
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm"
+                >
+                  {error}
+                </motion.div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={!title.trim() || !content.trim() || isOverLimit || isSubmitting}
+                size="lg"
+                className="h-12 text-lg font-semibold"
               >
-                {sizeDisplay} / 1 MB
-              </div>
-            </div>
-
-            {error && (
-              <div className="p-3 bg-accent-50 border border-accent-500 rounded-lg text-accent-800 text-sm">
-                {error}
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              disabled={!title.trim() || !content.trim() || isOverLimit || isSubmitting}
-              className="h-12 text-lg font-semibold bg-primary-700 hover:bg-primary-800 active:bg-primary-900 disabled:bg-neutral-300"
-            >
-              {isSubmitting ? 'Processing...' : 'Start Reading'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+                {isSubmitting ? 'Processing...' : 'Start Reading'}
+              </Button>
+            </motion.form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

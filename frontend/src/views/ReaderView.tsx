@@ -198,8 +198,8 @@ export function ReaderView() {
 
   if (loading) {
     return (
-      <div className="flex flex-col min-h-screen bg-neutral-50">
-        <div className="flex flex-col items-center justify-center flex-1 gap-4 text-neutral-600">
+      <div className="flex flex-col min-h-screen bg-vignette">
+        <div className="flex flex-col items-center justify-center flex-1 gap-4 text-text-secondary font-rsvp text-xl italic">
           Loading...
         </div>
       </div>
@@ -208,13 +208,10 @@ export function ReaderView() {
 
   if (error) {
     return (
-      <div className="flex flex-col min-h-screen bg-neutral-50">
+      <div className="flex flex-col min-h-screen bg-vignette">
         <div className="flex flex-col items-center justify-center flex-1 gap-4">
-          <p className="text-accent-500 text-lg">{error}</p>
-          <Button
-            onClick={() => navigate('/')}
-            className="bg-primary-700 hover:bg-primary-800"
-          >
+          <p className="text-destructive text-lg">{error}</p>
+          <Button onClick={() => navigate('/')}>
             Go Back
           </Button>
         </div>
@@ -223,27 +220,27 @@ export function ReaderView() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-neutral-50">
-      <header className="flex items-center gap-4 px-4 md:px-8 py-4 bg-white border-b border-neutral-200">
+    <div className="flex flex-col min-h-screen bg-vignette">
+      <header className="flex items-center gap-4 px-4 md:px-8 py-4 bg-bg-elevated/80 backdrop-blur-sm border-b border-border-subtle">
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={() => navigate('/')}
-          className="gap-2 text-neutral-600 hover:text-primary-700 hover:border-primary-700"
+          className="gap-2 text-text-secondary hover:text-amber-400 hover:bg-bg-surface"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
         </Button>
-        <h1 className="flex-1 text-lg md:text-xl font-semibold text-neutral-800 truncate">
+        <h1 className="flex-1 text-lg md:text-xl font-semibold text-text-primary truncate">
           {document?.title}
         </h1>
       </header>
 
-      <main className="flex-1 flex items-center justify-center p-4 md:p-8 bg-white">
+      <main className="flex-1 flex items-center justify-center p-4 md:p-8">
         <RSVPDisplay tokens={currentTokens} />
       </main>
 
-      <footer className="flex flex-col gap-4 p-4 md:px-8 md:py-6 bg-white border-t border-neutral-200">
+      <footer className="flex flex-col gap-4 p-4 md:px-8 md:py-6 bg-bg-elevated/80 backdrop-blur-sm border-t border-border-subtle">
         <ProgressBar
           current={position}
           total={document?.tokenCount || 0}
