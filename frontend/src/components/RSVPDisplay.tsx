@@ -1,10 +1,11 @@
+import React from 'react';
 import type { Token } from '../types';
 
 interface RSVPDisplayProps {
   tokens: Token[];
 }
 
-export function RSVPDisplay({ tokens }: RSVPDisplayProps) {
+export const RSVPDisplay = React.memo(function RSVPDisplay({ tokens }: RSVPDisplayProps) {
   if (tokens.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[200px] p-8 relative">
@@ -61,4 +62,4 @@ export function RSVPDisplay({ tokens }: RSVPDisplayProps) {
       />
     </div>
   );
-}
+});

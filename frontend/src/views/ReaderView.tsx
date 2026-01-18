@@ -11,7 +11,7 @@ import { useReadingTimer } from '../hooks/useReadingTimer';
 const TOKENS_PER_CHUNK = 5000;
 const SAVE_INTERVAL = 5000; // 5 seconds
 
-export function ReaderView() {
+function ReaderView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -271,3 +271,6 @@ export function ReaderView() {
     </div>
   );
 }
+
+export { ReaderView };
+export default ReaderView;

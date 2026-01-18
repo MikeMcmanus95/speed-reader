@@ -1,3 +1,4 @@
+import React from 'react';
 import { Play, Pause } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ interface ControlBarProps {
   onChunkSizeChange: (size: number) => void;
 }
 
-export function ControlBar({
+export const ControlBar = React.memo(function ControlBar({
   isPlaying,
   wpm,
   chunkSize,
@@ -88,4 +89,4 @@ export function ControlBar({
       </div>
     </div>
   );
-}
+});

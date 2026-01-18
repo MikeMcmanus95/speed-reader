@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Pencil, Trash2, Check, X, BookOpen } from 'lucide-react';
@@ -13,7 +13,7 @@ interface DocumentCardProps {
   animationDelay?: number;
 }
 
-export function DocumentCard({ document, onRename, onDelete, animationDelay = 0 }: DocumentCardProps) {
+export const DocumentCard = React.memo(function DocumentCard({ document, onRename, onDelete, animationDelay = 0 }: DocumentCardProps) {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -225,7 +225,7 @@ export function DocumentCard({ document, onRename, onDelete, animationDelay = 0 
 
               <button
                 onClick={() => navigate(`/read/${document.id}`)}
-                className="w-full px-5 py-3 bg-bg-surface border-t border-border flex items-center justify-center gap-2 text-sm font-medium text-text-secondary hover:text-amber-400 hover:bg-bg-surface/80 transition-colors"
+                className="w-full px-5 py-3 bg-bg-surface border-t border-border flex items-center justify-center gap-2 text-sm font-medium text-text-secondary hover:text-amber-400 hover:bg-bg-surface/80 transition-colors cursor-pointer"
               >
                 <BookOpen className="w-4 h-4" />
                 {hasStarted ? 'Continue Reading' : 'Start Reading'}
@@ -236,4 +236,4 @@ export function DocumentCard({ document, onRename, onDelete, animationDelay = 0 
       </div>
     </motion.div>
   );
-}
+});

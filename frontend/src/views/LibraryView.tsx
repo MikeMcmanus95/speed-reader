@@ -7,7 +7,7 @@ import { DocumentCard } from '../components/DocumentCard';
 import { listDocuments, updateDocument, deleteDocument } from '../api';
 import type { DocumentWithProgress } from '../types';
 
-export function LibraryView() {
+function LibraryView() {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<DocumentWithProgress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,7 +53,7 @@ export function LibraryView() {
           >
             <button
               onClick={() => navigate('/')}
-              className="p-1 -m-1 rounded-lg hover:bg-bg-elevated transition-colors"
+              className="p-1 -m-1 rounded-lg hover:bg-bg-elevated transition-colors cursor-pointer"
               aria-label="Go to new document"
             >
               <Library className="w-6 h-6 text-amber-400" />
@@ -135,3 +135,6 @@ export function LibraryView() {
     </div>
   );
 }
+
+export { LibraryView };
+export default LibraryView;
