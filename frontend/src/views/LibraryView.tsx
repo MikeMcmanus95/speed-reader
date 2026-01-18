@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { Plus, Library, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DocumentCard } from '../components/DocumentCard';
+import { UserMenu } from '../components/UserMenu';
 import { listDocuments, updateDocument, deleteDocument } from '../api';
 import type { DocumentWithProgress } from '../types';
 
@@ -66,6 +67,7 @@ function LibraryView() {
             initial={{ opacity: 0, x: 12 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.4 }}
+            className="flex items-center gap-4"
           >
             <Button
               onClick={() => navigate('/')}
@@ -74,6 +76,7 @@ function LibraryView() {
               <Plus className="w-4 h-4" />
               New Document
             </Button>
+            <UserMenu />
           </motion.div>
         </div>
       </header>

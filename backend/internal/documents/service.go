@@ -3,8 +3,10 @@ package documents
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/mikepersonal/speed-reader/backend/internal/auth"
 	"github.com/mikepersonal/speed-reader/backend/internal/config"
 	"github.com/mikepersonal/speed-reader/backend/internal/storage"
 	"github.com/mikepersonal/speed-reader/backend/internal/tokenizer"
@@ -12,22 +14,41 @@ import (
 
 // Service orchestrates document operations
 type Service struct {
-	repo       *Repository
-	chunkStore *storage.ChunkStore
+	repo            *Repository
+	chunkStore      *storage.ChunkStore
+	guestDocTTLDays int
 }
 
 // NewService creates a new document service
-func NewService(repo *Repository, chunkStore *storage.ChunkStore) *Service {
+func NewService(repo *Repository, chunkStore *storage.ChunkStore, guestDocTTLDays int) *Service {
 	return &Service{
-		repo:       repo,
-		chunkStore: chunkStore,
+		repo:            repo,
+		chunkStore:      chunkStore,
+		guestDocTTLDays: guestDocTTLDays,
 	}
 }
 
 // CreateDocument creates a new document and processes its content
 func (s *Service) CreateDocument(ctx context.Context, title, content string) (*Document, error) {
+	// Get user from context
+	user, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("user not found in context")
+	}
+
+	// Set expiration for guest documents
+	var expiresAt *time.Time
+	if user.IsGuest {
+		t := time.Now().AddDate(0, 0, s.guestDocTTLDays)
+		expiresAt = &t
+	}
+
 	// Create document record
-	doc, err := s.repo.Create(ctx, title)
+	doc, err := s.repo.Create(ctx, &CreateParams{
+		Title:     title,
+		UserID:    user.ID,
+		ExpiresAt: expiresAt,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create document: %w", err)
 	}
@@ -69,15 +90,25 @@ func (s *Service) CreateDocument(ctx context.Context, title, content string) (*D
 	return doc, nil
 }
 
-// GetDocument retrieves a document by ID
+// GetDocument retrieves a document by ID with access control
 func (s *Service) GetDocument(ctx context.Context, id uuid.UUID) (*Document, error) {
-	return s.repo.GetByID(ctx, id)
+	doc, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check access
+	if err := s.checkAccess(ctx, doc); err != nil {
+		return nil, err
+	}
+
+	return doc, nil
 }
 
 // GetTokens retrieves tokens for a specific chunk
 func (s *Service) GetTokens(ctx context.Context, docID uuid.UUID, chunkIndex int) (*storage.Chunk, error) {
-	// Verify document exists
-	doc, err := s.repo.GetByID(ctx, docID)
+	// Verify document exists and user has access
+	doc, err := s.GetDocument(ctx, docID)
 	if err != nil {
 		return nil, err
 	}
@@ -91,28 +122,44 @@ func (s *Service) GetTokens(ctx context.Context, docID uuid.UUID, chunkIndex int
 
 // GetReadingState retrieves reading state for a document
 func (s *Service) GetReadingState(ctx context.Context, docID uuid.UUID) (*ReadingState, error) {
-	// Verify document exists
-	if _, err := s.repo.GetByID(ctx, docID); err != nil {
+	user, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("user not found in context")
+	}
+
+	// Verify document exists and user has access
+	if _, err := s.GetDocument(ctx, docID); err != nil {
 		return nil, err
 	}
 
-	return s.repo.GetReadingState(ctx, docID)
+	return s.repo.GetReadingState(ctx, user.ID, docID)
 }
 
 // UpdateReadingState updates reading state for a document
 func (s *Service) UpdateReadingState(ctx context.Context, state *ReadingState) error {
-	// Verify document exists
-	if _, err := s.repo.GetByID(ctx, state.DocID); err != nil {
+	user, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return fmt.Errorf("user not found in context")
+	}
+
+	// Verify document exists and user has access
+	if _, err := s.GetDocument(ctx, state.DocID); err != nil {
 		return err
 	}
 
+	state.UserID = user.ID
 	return s.repo.UpsertReadingState(ctx, state)
 }
 
 // DeleteDocument removes a document and its chunks
 func (s *Service) DeleteDocument(ctx context.Context, id uuid.UUID) error {
-	// Delete from database first
-	if err := s.repo.Delete(ctx, id); err != nil {
+	user, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return fmt.Errorf("user not found in context")
+	}
+
+	// Delete from database first (checks ownership)
+	if err := s.repo.Delete(ctx, id, user.ID); err != nil {
 		return err
 	}
 
@@ -120,12 +167,53 @@ func (s *Service) DeleteDocument(ctx context.Context, id uuid.UUID) error {
 	return s.chunkStore.DeleteDocument(id.String())
 }
 
-// ListDocuments retrieves all documents with their reading progress
+// ListDocuments retrieves all documents for the current user with their reading progress
 func (s *Service) ListDocuments(ctx context.Context) ([]DocumentWithProgress, error) {
-	return s.repo.List(ctx)
+	user, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("user not found in context")
+	}
+
+	return s.repo.List(ctx, user.ID)
 }
 
 // UpdateDocumentTitle updates the title of a document
 func (s *Service) UpdateDocumentTitle(ctx context.Context, id uuid.UUID, title string) error {
-	return s.repo.UpdateTitle(ctx, id, title)
+	user, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return fmt.Errorf("user not found in context")
+	}
+
+	return s.repo.UpdateTitle(ctx, id, user.ID, title)
+}
+
+// checkAccess verifies the user has access to a document
+func (s *Service) checkAccess(ctx context.Context, doc *Document) error {
+	// Public documents are accessible to everyone
+	if doc.Visibility == VisibilityPublic {
+		return nil
+	}
+
+	// Get user from context
+	user, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return fmt.Errorf("access denied: not authenticated")
+	}
+
+	// Check ownership
+	if doc.UserID != nil && *doc.UserID == user.ID {
+		return nil
+	}
+
+	return fmt.Errorf("access denied: not the owner")
+}
+
+// GetRepository returns the underlying repository (for cleanup jobs)
+func (s *Service) GetRepository() *Repository {
+	return s.repo
+}
+
+// GetChunkStore returns the underlying chunk store (for cleanup jobs)
+func (s *Service) GetChunkStore() *storage.ChunkStore {
+	return s.chunkStore
 }

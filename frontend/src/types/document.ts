@@ -1,11 +1,16 @@
 export type DocumentStatus = 'pending' | 'processing' | 'ready' | 'error';
+export type DocumentVisibility = 'private' | 'public';
 
 export interface Document {
   id: string;
+  userId?: string;
   title: string;
   status: DocumentStatus;
   tokenCount: number;
   chunkCount: number;
+  visibility: DocumentVisibility;
+  shareToken?: string;
+  expiresAt?: string;
   createdAt: string;
 }
 

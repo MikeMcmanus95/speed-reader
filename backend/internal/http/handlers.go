@@ -7,17 +7,23 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/mikepersonal/speed-reader/backend/internal/auth"
 	"github.com/mikepersonal/speed-reader/backend/internal/documents"
+	"github.com/mikepersonal/speed-reader/backend/internal/sharing"
 )
 
 // Handlers contains HTTP handlers for the API
 type Handlers struct {
-	docService *documents.Service
+	docService     *documents.Service
+	sharingService *sharing.Service
 }
 
 // NewHandlers creates a new Handlers instance
-func NewHandlers(docService *documents.Service) *Handlers {
-	return &Handlers{docService: docService}
+func NewHandlers(docService *documents.Service, sharingService *sharing.Service) *Handlers {
+	return &Handlers{
+		docService:     docService,
+		sharingService: sharingService,
+	}
 }
 
 // CreateDocumentRequest represents the request body for creating a document
@@ -36,6 +42,11 @@ type UpdateReadingStateRequest struct {
 // UpdateDocumentRequest represents the request body for updating a document
 type UpdateDocumentRequest struct {
 	Title string `json:"title"`
+}
+
+// SetVisibilityRequest represents the request body for setting document visibility
+type SetVisibilityRequest struct {
+	Visibility string `json:"visibility"`
 }
 
 // ErrorResponse represents an error response
@@ -238,4 +249,171 @@ func (h *Handlers) DeleteDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetShareInfo handles GET /api/documents/:id/share
+func (h *Handlers) GetShareInfo(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	docID, err := uuid.Parse(idStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid document ID")
+		return
+	}
+
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+
+	info, err := h.sharingService.GetShareInfo(r.Context(), docID, userID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "document not found")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, info)
+}
+
+// GenerateShareToken handles POST /api/documents/:id/share
+func (h *Handlers) GenerateShareToken(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	docID, err := uuid.Parse(idStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid document ID")
+		return
+	}
+
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+
+	info, err := h.sharingService.GenerateShareToken(r.Context(), docID, userID)
+	if err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, info)
+}
+
+// RevokeShareToken handles DELETE /api/documents/:id/share
+func (h *Handlers) RevokeShareToken(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	docID, err := uuid.Parse(idStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid document ID")
+		return
+	}
+
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+
+	if err := h.sharingService.RevokeShareToken(r.Context(), docID, userID); err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// SetVisibility handles PUT /api/documents/:id/visibility
+func (h *Handlers) SetVisibility(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	docID, err := uuid.Parse(idStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid document ID")
+		return
+	}
+
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+
+	var req SetVisibilityRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Visibility != "private" && req.Visibility != "public" {
+		writeError(w, http.StatusBadRequest, "visibility must be 'private' or 'public'")
+		return
+	}
+
+	info, err := h.sharingService.SetVisibility(r.Context(), docID, userID, sharing.Visibility(req.Visibility))
+	if err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, info)
+}
+
+// GetSharedDocument handles GET /api/shared/:token
+func (h *Handlers) GetSharedDocument(w http.ResponseWriter, r *http.Request) {
+	tokenStr := chi.URLParam(r, "token")
+	token, err := uuid.Parse(tokenStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid share token")
+		return
+	}
+
+	doc, err := h.sharingService.GetDocumentByShareToken(r.Context(), token)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "shared document not found")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, doc)
+}
+
+// GetSharedDocumentTokens handles GET /api/shared/:token/tokens
+func (h *Handlers) GetSharedDocumentTokens(w http.ResponseWriter, r *http.Request) {
+	tokenStr := chi.URLParam(r, "token")
+	token, err := uuid.Parse(tokenStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid share token")
+		return
+	}
+
+	// Get the document first to verify it exists and get the ID
+	doc, err := h.sharingService.GetDocumentByShareToken(r.Context(), token)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "shared document not found")
+		return
+	}
+
+	chunkStr := r.URL.Query().Get("chunk")
+	if chunkStr == "" {
+		chunkStr = "0"
+	}
+
+	chunkIndex, err := strconv.Atoi(chunkStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid chunk index")
+		return
+	}
+
+	if chunkIndex < 0 || chunkIndex >= doc.ChunkCount {
+		writeError(w, http.StatusBadRequest, "chunk index out of range")
+		return
+	}
+
+	// Get chunks from the chunk store directly
+	chunkStore := h.docService.GetChunkStore()
+	chunk, err := chunkStore.ReadChunk(doc.ID.String(), chunkIndex)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, chunk)
 }
