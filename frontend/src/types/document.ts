@@ -23,7 +23,7 @@ export interface ReadingState {
 }
 
 export interface CreateDocumentRequest {
-  title: string;
+  title?: string; // Optional - server will generate a fun random name if not provided
   content: string;
 }
 

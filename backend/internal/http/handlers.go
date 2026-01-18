@@ -74,11 +74,7 @@ func (h *Handlers) CreateDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Title == "" {
-		writeError(w, http.StatusBadRequest, "title is required")
-		return
-	}
-
+	// Title is optional - service will generate a random name if empty
 	if req.Content == "" {
 		writeError(w, http.StatusBadRequest, "content is required")
 		return
