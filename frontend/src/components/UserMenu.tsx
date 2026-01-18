@@ -121,7 +121,7 @@ export function UserMenu() {
                       setIsOpen(false);
                       login();
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-bg-surface transition-colors group"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-bg-surface transition-colors group cursor-pointer"
                   >
                     <div className="w-8 h-8 rounded-full bg-amber-400/10 flex items-center justify-center group-hover:bg-amber-400/20 transition-colors">
                       <LogIn className="w-4 h-4 text-amber-400" />
@@ -141,7 +141,7 @@ export function UserMenu() {
                       setIsOpen(false);
                       await logout();
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-bg-surface transition-colors group"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-bg-surface transition-colors group cursor-pointer"
                   >
                     <div className="w-8 h-8 rounded-full bg-bg-surface flex items-center justify-center group-hover:bg-destructive/10 transition-colors">
                       <LogOut className="w-4 h-4 text-text-tertiary group-hover:text-destructive transition-colors" />

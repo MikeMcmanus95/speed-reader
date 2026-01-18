@@ -44,7 +44,7 @@ function LibraryView() {
 
   return (
     <div className="min-h-screen bg-warm-gradient bg-grain">
-      <header className="sticky top-0 z-10 bg-bg-base/80 backdrop-blur-md border-b border-border">
+      <header className="sticky top-0 z-20 bg-bg-base/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
           <motion.div
             initial={{ opacity: 0, x: -12 }}
