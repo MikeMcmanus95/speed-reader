@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -108,11 +110,15 @@ func (h *Handlers) CreateGuest(w http.ResponseWriter, r *http.Request) {
 
 // GoogleLogin handles GET /api/auth/google
 func (h *Handlers) GoogleLogin(w http.ResponseWriter, r *http.Request) {
-	// Check if there's a current guest user to merge
+	// Read guest ID from query parameter (passed by frontend when user is a guest)
+	// This enables document migration when a guest user signs up
 	var url string
-	if user, ok := UserFromContext(r.Context()); ok && user.IsGuest {
-		userID := user.ID
-		url = h.service.GetGoogleAuthURL(&userID)
+	if guestIDStr := r.URL.Query().Get("guest_id"); guestIDStr != "" {
+		if guestID, err := uuid.Parse(guestIDStr); err == nil {
+			url = h.service.GetGoogleAuthURL(&guestID)
+		} else {
+			url = h.service.GetGoogleAuthURL(nil)
+		}
 	} else {
 		url = h.service.GetGoogleAuthURL(nil)
 	}

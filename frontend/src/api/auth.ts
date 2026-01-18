@@ -54,8 +54,12 @@ export async function getCurrentUser(accessToken: string): Promise<User> {
   return response.json();
 }
 
-export function getGoogleAuthUrl(): string {
-  return `${API_BASE}/google`;
+export function getGoogleAuthUrl(guestId?: string): string {
+  const base = `${API_BASE}/google`;
+  if (guestId) {
+    return `${base}?guest_id=${guestId}`;
+  }
+  return base;
 }
 
 // Sharing API
