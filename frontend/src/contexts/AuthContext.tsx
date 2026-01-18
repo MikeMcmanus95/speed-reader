@@ -187,9 +187,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [state.accessToken, tokenExpiresAt, refreshAuth]);
 
   const login = useCallback(() => {
-    // Redirect to Google OAuth
-    window.location.href = getGoogleAuthUrl();
-  }, []);
+    // Pass guest user ID so documents can be migrated on sign up
+    const guestId = state.user?.isGuest ? state.user.id : undefined;
+    window.location.href = getGoogleAuthUrl(guestId);
+  }, [state.user]);
 
   const logout = useCallback(async () => {
     try {
