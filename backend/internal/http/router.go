@@ -42,8 +42,6 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 
 	// API routes
 	r.Route("/api", func(r chi.Router) {
-		r.Use(MaxBodySize)
-
 		// Auth routes (no auth required for most)
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/guest", authHandlers.CreateGuest)
@@ -62,6 +60,7 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 		// Document routes (require auth)
 		r.Route("/documents", func(r chi.Router) {
 			r.Use(auth.RequireAuth(deps.AuthService))
+			r.Use(ContextAwareMaxBodySize) // Apply body size limit after auth so we know user type
 
 			r.Get("/", docHandlers.ListDocuments)
 			r.Post("/", docHandlers.CreateDocument)

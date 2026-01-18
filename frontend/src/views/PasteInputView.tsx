@@ -8,32 +8,42 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { UserMenu } from '../components/UserMenu';
+import { useUser } from '../hooks/useAuth';
 import { cn } from '@/lib/utils';
 
-const MAX_SIZE = 1024 * 1024; // 1MB
+const GUEST_MAX_SIZE = 1024 * 1024; // 1MB
+const AUTH_MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
 export function PasteInputView() {
   const navigate = useNavigate();
+  const user = useUser();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Authenticated (non-guest) users get a higher limit
+  const maxSize = user && !user.isGuest ? AUTH_MAX_SIZE : GUEST_MAX_SIZE;
+  const maxSizeDisplay = user && !user.isGuest ? '10 MB' : '1 MB';
+
   const contentSize = new Blob([content]).size;
-  const isOverLimit = contentSize > MAX_SIZE;
+  const isOverLimit = contentSize > maxSize;
   const sizeDisplay = contentSize > 1024
     ? `${(contentSize / 1024).toFixed(1)} KB`
     : `${contentSize} bytes`;
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim() || isOverLimit || isSubmitting) return;
+    if (!content.trim() || isOverLimit || isSubmitting) return;
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const doc = await createDocument({ title: title.trim(), content });
+      const doc = await createDocument({
+        title: title.trim(), // Server generates random name if empty
+        content,
+      });
       navigate(`/read/${doc.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create document');
@@ -99,11 +109,10 @@ export function PasteInputView() {
             >
               <Input
                 type="text"
-                placeholder="Document title"
+                placeholder="Document title (optional — we'll pick a fun name!)"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 disabled={isSubmitting}
-                required
                 className="h-12 text-base"
               />
 
@@ -115,7 +124,7 @@ export function PasteInputView() {
                   disabled={isSubmitting}
                   required
                   className={cn(
-                    "min-h-[280px] md:min-h-[360px] text-base leading-relaxed resize-y",
+                    "min-h-[280px] md:min-h-[360px] max-h-[50vh] text-base leading-relaxed resize-y",
                     isOverLimit && "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30"
                   )}
                 />
@@ -125,7 +134,7 @@ export function PasteInputView() {
                     isOverLimit ? "text-destructive font-semibold" : "text-text-tertiary"
                   )}
                 >
-                  {sizeDisplay} / 1 MB
+                  {sizeDisplay} / {maxSizeDisplay}
                 </div>
               </div>
 
@@ -141,7 +150,7 @@ export function PasteInputView() {
 
               <Button
                 type="submit"
-                disabled={!title.trim() || !content.trim() || isOverLimit || isSubmitting}
+                disabled={!content.trim() || isOverLimit || isSubmitting}
                 size="lg"
                 className="h-12 text-lg font-semibold"
               >

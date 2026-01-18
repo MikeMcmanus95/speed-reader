@@ -3,6 +3,7 @@ package documents
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,6 +35,12 @@ func (s *Service) CreateDocument(ctx context.Context, title, content string) (*D
 	user, ok := auth.UserFromContext(ctx)
 	if !ok {
 		return nil, fmt.Errorf("user not found in context")
+	}
+
+	// Generate random title if not provided
+	title = strings.TrimSpace(title)
+	if title == "" {
+		title = GenerateRandomTitle()
 	}
 
 	// Set expiration for guest documents

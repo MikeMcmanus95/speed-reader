@@ -6,8 +6,15 @@ import (
 )
 
 const (
-	// MaxPasteSize is the maximum allowed paste size (1MB)
-	MaxPasteSize = 1 * 1024 * 1024
+	// MaxGuestPasteSize is the maximum allowed paste size for guest users (1MB)
+	MaxGuestPasteSize = 1 * 1024 * 1024
+
+	// MaxAuthPasteSize is the maximum allowed paste size for authenticated users (10MB)
+	MaxAuthPasteSize = 10 * 1024 * 1024
+
+	// MaxPasteSize is kept for backward compatibility (same as guest limit)
+	// Deprecated: Use MaxGuestPasteSize or MaxAuthPasteSize instead
+	MaxPasteSize = MaxGuestPasteSize
 
 	// ChunkSize is the number of tokens per chunk file
 	ChunkSize = 5000
