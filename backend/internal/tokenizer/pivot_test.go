@@ -11,10 +11,10 @@ func TestCalculatePivot(t *testing.T) {
 		{"a", 0},
 		{"be", 1},
 		{"the", 1},
-		{"word", 1},
-		{"hello", 1},
-		{"reading", 2},
-		{"extraordinary", 3},
+		{"word", 2},
+		{"hello", 2},
+		{"reading", 3},
+		{"extraordinary", 6},
 	}
 
 	for _, tt := range tests {
@@ -33,9 +33,9 @@ func TestCalculatePivot_Unicode(t *testing.T) {
 		word     string
 		expected int
 	}{
-		{"café", 1},
-		{"日本語", 1}, // 3 runes -> pivot at position 1
-		{"über", 1},
+		{"café", 2},
+		{"日本語", 1}, // 3 runes -> pivot at center
+		{"über", 2},
 	}
 
 	for _, tt := range tests {
