@@ -47,7 +47,6 @@ services:
     volumes:
       - ./observability/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
       - /var/log:/var/log:ro
-      - ./backend/logs:/var/log/speedreader:ro
     depends_on:
       - loki
     networks:
