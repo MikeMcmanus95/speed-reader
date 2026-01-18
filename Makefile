@@ -65,15 +65,15 @@ run: build db-up
 	./backend/bin/api
 
 # Observability stack commands
-observability-up:
+o11y-up:
 	docker-compose -f docker-compose.observability.yml up -d
 	@echo "Observability stack started:"
 	@echo "  Grafana:  http://localhost:3001 (admin/admin)"
 	@echo "  Jaeger:   http://localhost:16686"
 	@echo "  Loki:     http://localhost:3100"
 
-observability-down:
+o11y-down:
 	docker-compose -f docker-compose.observability.yml down
 
-observability-logs:
+o11y-logs:
 	docker-compose -f docker-compose.observability.yml logs -f
