@@ -1,4 +1,7 @@
-import './ControlBar.css';
+import { Play, Pause } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface ControlBarProps {
   isPlaying: boolean;
@@ -18,53 +21,57 @@ export function ControlBar({
   onChunkSizeChange,
 }: ControlBarProps) {
   return (
-    <div className="control-bar">
-      <button
-        className="play-pause-button"
+    <div className="flex items-center justify-center gap-8 p-4 md:px-8 bg-neutral-100 rounded-lg flex-wrap">
+      <Button
+        size="icon"
         onClick={onPlayPause}
         aria-label={isPlaying ? 'Pause' : 'Play'}
+        className="w-12 h-12 rounded-full bg-primary-700 hover:bg-primary-800 active:bg-primary-900"
       >
         {isPlaying ? (
-          <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-            <rect x="6" y="4" width="4" height="16" />
-            <rect x="14" y="4" width="4" height="16" />
-          </svg>
+          <Pause className="w-6 h-6" />
         ) : (
-          <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-            <polygon points="5,3 19,12 5,21" />
-          </svg>
+          <Play className="w-6 h-6" />
         )}
-      </button>
+      </Button>
 
-      <div className="control-group">
-        <label className="control-label">
-          <span className="control-label-text">WPM</span>
-          <input
-            type="range"
-            className="wpm-slider"
-            min="100"
-            max="1000"
-            step="25"
-            value={wpm}
-            onChange={(e) => onWpmChange(Number(e.target.value))}
-          />
-          <span className="control-value">{wpm}</span>
-        </label>
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium text-neutral-600 uppercase tracking-wide">
+          WPM
+        </span>
+        <Slider
+          value={[wpm]}
+          min={100}
+          max={1000}
+          step={25}
+          onValueChange={([value]) => onWpmChange(value)}
+          className="w-24 md:w-32"
+        />
+        <span className="min-w-12 font-mono text-sm font-semibold text-neutral-800">
+          {wpm}
+        </span>
       </div>
 
-      <div className="control-group">
-        <span className="control-label-text">Words</span>
-        <div className="chunk-toggle">
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium text-neutral-600 uppercase tracking-wide">
+          Words
+        </span>
+        <ToggleGroup
+          type="single"
+          value={String(chunkSize)}
+          onValueChange={(value) => value && onChunkSizeChange(Number(value))}
+          variant="outline"
+        >
           {[1, 2, 3, 4].map((size) => (
-            <button
+            <ToggleGroupItem
               key={size}
-              className={`chunk-button ${chunkSize === size ? 'active' : ''}`}
-              onClick={() => onChunkSizeChange(size)}
+              value={String(size)}
+              className="w-8 h-8 text-sm font-medium data-[state=on]:bg-primary-700 data-[state=on]:text-white data-[state=on]:border-primary-700"
             >
               {size}
-            </button>
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       </div>
     </div>
   );

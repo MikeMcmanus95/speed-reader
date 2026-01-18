@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { PasteInputView, ReaderView } from './views';
-import './App.css';
 
 function App() {
   return (

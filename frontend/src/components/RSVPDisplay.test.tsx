@@ -37,54 +37,54 @@ describe('RSVPDisplay', () => {
       expect(screen.getByText('llo')).toBeInTheDocument(); // after pivot
     });
 
-    it('should highlight pivot character with correct class', () => {
+    it('should highlight pivot character with correct test id', () => {
       const token = createToken('Hello', 1);
-      const { container } = render(<RSVPDisplay tokens={[token]} />);
+      render(<RSVPDisplay tokens={[token]} />);
 
-      const pivotElement = container.querySelector('.rsvp-pivot');
+      const pivotElement = screen.getByTestId('rsvp-pivot');
       expect(pivotElement).toBeInTheDocument();
-      expect(pivotElement?.textContent).toBe('e');
+      expect(pivotElement.textContent).toBe('e');
     });
 
-    it('should render before-pivot text with correct class', () => {
+    it('should render before-pivot text with correct test id', () => {
       const token = createToken('Hello', 1);
-      const { container } = render(<RSVPDisplay tokens={[token]} />);
+      render(<RSVPDisplay tokens={[token]} />);
 
-      const beforeElement = container.querySelector('.rsvp-before');
+      const beforeElement = screen.getByTestId('rsvp-before');
       expect(beforeElement).toBeInTheDocument();
-      expect(beforeElement?.textContent).toBe('H');
+      expect(beforeElement.textContent).toBe('H');
     });
 
-    it('should render after-pivot text with correct class', () => {
+    it('should render after-pivot text with correct test id', () => {
       const token = createToken('Hello', 1);
-      const { container } = render(<RSVPDisplay tokens={[token]} />);
+      render(<RSVPDisplay tokens={[token]} />);
 
-      const afterElement = container.querySelector('.rsvp-after');
+      const afterElement = screen.getByTestId('rsvp-after');
       expect(afterElement).toBeInTheDocument();
-      expect(afterElement?.textContent).toBe('llo');
+      expect(afterElement.textContent).toBe('llo');
     });
   });
 
   describe('pivot edge cases', () => {
     it('should handle pivot at start of word', () => {
       const token = createToken('Hi', 0);
-      const { container } = render(<RSVPDisplay tokens={[token]} />);
+      render(<RSVPDisplay tokens={[token]} />);
 
-      const beforeElement = container.querySelector('.rsvp-before');
-      const pivotElement = container.querySelector('.rsvp-pivot');
-      const afterElement = container.querySelector('.rsvp-after');
+      const beforeElement = screen.getByTestId('rsvp-before');
+      const pivotElement = screen.getByTestId('rsvp-pivot');
+      const afterElement = screen.getByTestId('rsvp-after');
 
-      expect(beforeElement?.textContent).toBe('');
-      expect(pivotElement?.textContent).toBe('H');
-      expect(afterElement?.textContent).toBe('i');
+      expect(beforeElement.textContent).toBe('');
+      expect(pivotElement.textContent).toBe('H');
+      expect(afterElement.textContent).toBe('i');
     });
 
     it('should handle single character word', () => {
       const token = createToken('I', 0);
-      const { container } = render(<RSVPDisplay tokens={[token]} />);
+      render(<RSVPDisplay tokens={[token]} />);
 
-      const pivotElement = container.querySelector('.rsvp-pivot');
-      expect(pivotElement?.textContent).toBe('I');
+      const pivotElement = screen.getByTestId('rsvp-pivot');
+      expect(pivotElement.textContent).toBe('I');
     });
   });
 
@@ -100,14 +100,14 @@ describe('RSVPDisplay', () => {
       expect(screen.getByText(/world/)).toBeInTheDocument();
     });
 
-    it('should have chunk class for multi-word display', () => {
+    it('should have chunk test id for multi-word display', () => {
       const tokens = [
         createToken('Hello', 1),
         createToken('world', 2),
       ];
-      const { container } = render(<RSVPDisplay tokens={tokens} />);
+      render(<RSVPDisplay tokens={tokens} />);
 
-      const chunkElement = container.querySelector('.rsvp-chunk');
+      const chunkElement = screen.getByTestId('rsvp-chunk');
       expect(chunkElement).toBeInTheDocument();
     });
   });
@@ -115,16 +115,16 @@ describe('RSVPDisplay', () => {
   describe('focus line', () => {
     it('should render focus line for single word mode', () => {
       const token = createToken('Hello', 1);
-      const { container } = render(<RSVPDisplay tokens={[token]} />);
+      render(<RSVPDisplay tokens={[token]} />);
 
-      const focusLine = container.querySelector('.rsvp-focus-line');
+      const focusLine = screen.getByTestId('rsvp-focus-line');
       expect(focusLine).toBeInTheDocument();
     });
 
     it('should not render focus line for empty state', () => {
-      const { container } = render(<RSVPDisplay tokens={[]} />);
+      render(<RSVPDisplay tokens={[]} />);
 
-      const focusLine = container.querySelector('.rsvp-focus-line');
+      const focusLine = screen.queryByTestId('rsvp-focus-line');
       expect(focusLine).not.toBeInTheDocument();
     });
   });
