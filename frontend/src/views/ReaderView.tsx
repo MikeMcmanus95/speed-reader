@@ -30,6 +30,8 @@ function ReaderView() {
   const engineRef = useRef<RSVPEngine | null>(null);
   const lastSaveRef = useRef<number>(0);
   const loadedChunksRef = useRef<Set<number>>(new Set());
+  const positionRef = useRef(position);
+  const configRef = useRef(config);
 
   const { elapsedFormatted, totalFormatted } = useReadingTimer({
     tokens: loadedTokens,
@@ -135,35 +137,31 @@ function ReaderView() {
 
   // Auto-save reading state
   useEffect(() => {
-    const saveState = async () => {
-      if (!id || Date.now() - lastSaveRef.current < SAVE_INTERVAL) return;
-
-      try {
-        await updateReadingState(id, {
-          tokenIndex: position,
-          wpm: config.wpm,
-          chunkSize: config.chunkSize,
-        });
-        lastSaveRef.current = Date.now();
-      } catch (err) {
+    const saveState = () => {
+      if (!id) return;
+      updateReadingState(id, {
+        tokenIndex: positionRef.current,
+        wpm: configRef.current.wpm,
+        chunkSize: configRef.current.chunkSize,
+      }).catch((err) => {
         console.error('Failed to save reading state:', err);
-      }
+      });
     };
 
+    // Periodic save every 5 seconds
     const interval = setInterval(saveState, SAVE_INTERVAL);
 
-    // Save on unmount
+    // Save on browser close/refresh
+    const handleBeforeUnload = () => saveState();
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Cleanup: save on unmount and remove listeners
     return () => {
       clearInterval(interval);
-      if (id) {
-        updateReadingState(id, {
-          tokenIndex: position,
-          wpm: config.wpm,
-          chunkSize: config.chunkSize,
-        }).catch(() => { });
-      }
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      saveState();
     };
-  }, [id, position, config]);
+  }, [id]); // Only depends on id - NOT position or config
 
   // Keyboard controls
   useEffect(() => {
@@ -191,6 +189,10 @@ function ReaderView() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [position]);
+
+  // Keep refs in sync with state
+  useEffect(() => { positionRef.current = position; }, [position]);
+  useEffect(() => { configRef.current = config; }, [config]);
 
   const handlePlayPause = useCallback(() => {
     engineRef.current?.toggle();
