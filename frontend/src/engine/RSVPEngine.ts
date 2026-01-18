@@ -68,6 +68,10 @@ export class RSVPEngine {
     return this.totalTokens;
   }
 
+  getAllLoadedTokens(): Token[] {
+    return this.tokens;
+  }
+
   play(): void {
     if (this.isPlaying || this.tokens.length === 0) return;
 

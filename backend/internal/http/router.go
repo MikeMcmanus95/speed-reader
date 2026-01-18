@@ -32,8 +32,11 @@ func NewRouter(docService *documents.Service) *chi.Mux {
 		r.Use(MaxBodySize)
 
 		r.Route("/documents", func(r chi.Router) {
+			r.Get("/", handlers.ListDocuments)
 			r.Post("/", handlers.CreateDocument)
 			r.Get("/{id}", handlers.GetDocument)
+			r.Put("/{id}", handlers.UpdateDocument)
+			r.Delete("/{id}", handlers.DeleteDocument)
 			r.Get("/{id}/tokens", handlers.GetTokens)
 			r.Get("/{id}/reading-state", handlers.GetReadingState)
 			r.Put("/{id}/reading-state", handlers.UpdateReadingState)

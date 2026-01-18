@@ -33,6 +33,11 @@ type UpdateReadingStateRequest struct {
 	ChunkSize  int `json:"chunkSize"`
 }
 
+// UpdateDocumentRequest represents the request body for updating a document
+type UpdateDocumentRequest struct {
+	Title string `json:"title"`
+}
+
 // ErrorResponse represents an error response
 type ErrorResponse struct {
 	Error string `json:"error"`
@@ -170,4 +175,67 @@ func (h *Handlers) UpdateReadingState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, state)
+}
+
+// ListDocuments handles GET /api/documents
+func (h *Handlers) ListDocuments(w http.ResponseWriter, r *http.Request) {
+	docs, err := h.docService.ListDocuments(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list documents")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, docs)
+}
+
+// UpdateDocument handles PUT /api/documents/:id
+func (h *Handlers) UpdateDocument(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid document ID")
+		return
+	}
+
+	var req UpdateDocumentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Title == "" {
+		writeError(w, http.StatusBadRequest, "title is required")
+		return
+	}
+
+	if err := h.docService.UpdateDocumentTitle(r.Context(), id, req.Title); err != nil {
+		writeError(w, http.StatusNotFound, "document not found")
+		return
+	}
+
+	// Return the updated document
+	doc, err := h.docService.GetDocument(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "document not found")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, doc)
+}
+
+// DeleteDocument handles DELETE /api/documents/:id
+func (h *Handlers) DeleteDocument(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid document ID")
+		return
+	}
+
+	if err := h.docService.DeleteDocument(r.Context(), id); err != nil {
+		writeError(w, http.StatusNotFound, "document not found")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

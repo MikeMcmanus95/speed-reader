@@ -1,12 +1,15 @@
 import { useCallback, useRef } from 'react';
+import { TimerDisplay } from './TimerDisplay';
 
 interface ProgressBarProps {
   current: number;
   total: number;
   onSeek: (position: number) => void;
+  elapsedTime?: string;
+  totalTime?: string;
 }
 
-export function ProgressBar({ current, total, onSeek }: ProgressBarProps) {
+export function ProgressBar({ current, total, onSeek, elapsedTime, totalTime }: ProgressBarProps) {
   const progressRef = useRef<HTMLDivElement>(null);
 
   const progress = total > 0 ? (current / total) * 100 : 0;
@@ -46,8 +49,9 @@ export function ProgressBar({ current, total, onSeek }: ProgressBarProps) {
           style={{ left: `${progress}%` }}
         />
       </div>
-      <div className="mt-2 text-center text-sm font-counter text-text-tertiary">
-        {formatProgress()}
+      <div className="mt-2 flex items-center justify-between text-sm font-counter text-text-tertiary px-1">
+        <TimerDisplay elapsed={elapsedTime || '0:00'} total={totalTime || '0:00'} />
+        <div className="tabular-nums">{formatProgress()}</div>
       </div>
     </div>
   );

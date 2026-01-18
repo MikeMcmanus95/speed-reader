@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
+import { Library } from 'lucide-react';
 import { createDocument } from '../api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,7 +49,9 @@ export function PasteInputView() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
+              className="flex items-center justify-center gap-3"
             >
+              <Library className="w-10 h-10 md:w-12 md:h-12 text-amber-400" />
               <CardTitle className="text-4xl md:text-5xl font-serif font-semibold bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 bg-clip-text text-transparent">
                 Speed Reader
               </CardTitle>
@@ -61,6 +64,21 @@ export function PasteInputView() {
               <CardDescription className="text-text-secondary text-base mt-2 font-serif italic">
                 Paste your text below to begin
               </CardDescription>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15, ease: 'easeOut' }}
+              className="mt-4"
+            >
+              <Button
+                variant="outline"
+                onClick={() => navigate('/library')}
+                className="gap-2"
+              >
+                <Library className="w-4 h-4" />
+                My Library
+              </Button>
             </motion.div>
           </CardHeader>
 

@@ -185,3 +185,67 @@ func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 
 	return nil
 }
+
+// DocumentWithProgress combines document metadata with reading progress
+type DocumentWithProgress struct {
+	Document
+	TokenIndex int       `json:"tokenIndex"`
+	WPM        int       `json:"wpm"`
+	UpdatedAt  time.Time `json:"updatedAt"`
+}
+
+// List retrieves all documents with their reading progress
+func (r *Repository) List(ctx context.Context) ([]DocumentWithProgress, error) {
+	query := `
+		SELECT d.id, d.title, d.status, d.token_count, d.chunk_count, d.created_at,
+			   COALESCE(rs.token_index, 0), COALESCE(rs.wpm, 300), COALESCE(rs.updated_at, d.created_at)
+		FROM documents d
+		LEFT JOIN reading_state rs ON d.id = rs.doc_id
+		ORDER BY COALESCE(rs.updated_at, d.created_at) DESC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list documents: %w", err)
+	}
+	defer rows.Close()
+
+	var docs []DocumentWithProgress
+	for rows.Next() {
+		var doc DocumentWithProgress
+		err := rows.Scan(
+			&doc.ID, &doc.Title, &doc.Status, &doc.TokenCount, &doc.ChunkCount, &doc.CreatedAt,
+			&doc.TokenIndex, &doc.WPM, &doc.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan document: %w", err)
+		}
+		docs = append(docs, doc)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating documents: %w", err)
+	}
+
+	return docs, nil
+}
+
+// UpdateTitle updates only the title of a document
+func (r *Repository) UpdateTitle(ctx context.Context, id uuid.UUID, title string) error {
+	query := `UPDATE documents SET title = $2 WHERE id = $1`
+
+	result, err := r.db.ExecContext(ctx, query, id, title)
+	if err != nil {
+		return fmt.Errorf("failed to update title: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("document not found")
+	}
+
+	return nil
+}

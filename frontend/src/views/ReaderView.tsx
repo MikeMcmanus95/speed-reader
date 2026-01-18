@@ -6,6 +6,7 @@ import { RSVPEngine, type RSVPConfig } from '../engine/RSVPEngine';
 import { getDocument, getTokens, getReadingState, updateReadingState } from '../api';
 import type { Document, Token } from '../types';
 import { Button } from '@/components/ui/button';
+import { useReadingTimer } from '../hooks/useReadingTimer';
 
 const TOKENS_PER_CHUNK = 5000;
 const SAVE_INTERVAL = 5000; // 5 seconds
@@ -16,6 +17,7 @@ export function ReaderView() {
 
   const [document, setDocument] = useState<Document | null>(null);
   const [currentTokens, setCurrentTokens] = useState<Token[]>([]);
+  const [loadedTokens, setLoadedTokens] = useState<Token[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [config, setConfig] = useState<RSVPConfig>({ wpm: 300, chunkSize: 1 });
@@ -25,6 +27,13 @@ export function ReaderView() {
   const engineRef = useRef<RSVPEngine | null>(null);
   const lastSaveRef = useRef<number>(0);
   const loadedChunksRef = useRef<Set<number>>(new Set());
+
+  const { elapsedFormatted, totalFormatted } = useReadingTimer({
+    tokens: loadedTokens,
+    currentIndex: position,
+    totalTokens: document?.tokenCount || 0,
+    wpm: config.wpm,
+  });
 
   // Initialize engine
   useEffect(() => {
@@ -61,6 +70,7 @@ export function ReaderView() {
           document.tokenCount,
           TOKENS_PER_CHUNK
         );
+        setLoadedTokens(engineRef.current.getAllLoadedTokens());
       }
     } catch (err) {
       console.error(`Failed to load chunk ${chunkIndex}:`, err);
@@ -106,6 +116,7 @@ export function ReaderView() {
             );
           }
 
+          setLoadedTokens(engineRef.current.getAllLoadedTokens());
           engineRef.current.setPosition(state.tokenIndex);
         }
 
@@ -146,7 +157,7 @@ export function ReaderView() {
           tokenIndex: position,
           wpm: config.wpm,
           chunkSize: config.chunkSize,
-        }).catch(() => {});
+        }).catch(() => { });
       }
     };
   }, [id, position, config]);
@@ -225,7 +236,7 @@ export function ReaderView() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/library')}
           className="gap-2 text-text-secondary hover:text-amber-400 hover:bg-bg-surface"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -245,6 +256,8 @@ export function ReaderView() {
           current={position}
           total={document?.tokenCount || 0}
           onSeek={handleSeek}
+          elapsedTime={elapsedFormatted}
+          totalTime={totalFormatted}
         />
         <ControlBar
           isPlaying={isPlaying}
