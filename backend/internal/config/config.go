@@ -6,8 +6,15 @@ import (
 )
 
 const (
-	// MaxPasteSize is the maximum allowed paste size (1MB)
-	MaxPasteSize = 1 * 1024 * 1024
+	// MaxGuestPasteSize is the maximum allowed paste size for guest users (1MB)
+	MaxGuestPasteSize = 1 * 1024 * 1024
+
+	// MaxAuthPasteSize is the maximum allowed paste size for authenticated users (10MB)
+	MaxAuthPasteSize = 10 * 1024 * 1024
+
+	// MaxPasteSize is kept for backward compatibility (same as guest limit)
+	// Deprecated: Use MaxGuestPasteSize or MaxAuthPasteSize instead
+	MaxPasteSize = MaxGuestPasteSize
 
 	// ChunkSize is the number of tokens per chunk file
 	ChunkSize = 5000
@@ -31,6 +38,15 @@ type Config struct {
 	FrontendURL        string
 	GuestDocTTLDays    int
 	SecureCookie       bool
+
+	// Observability configuration
+	LogLevel    string // debug, info, warn, error
+	LogSalt     string // secret for PII pseudonymization
+	OTLPEndpoint string // OTLP gRPC endpoint (empty = stdout)
+	NodeID      string // instance identifier
+	Version     string // app version
+	Environment string // development, staging, production
+	ServiceName string // service name for tracing
 }
 
 // Load reads configuration from environment variables
@@ -54,6 +70,15 @@ func Load() *Config {
 		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
 		GuestDocTTLDays:    guestTTL,
 		SecureCookie:       secureCookie,
+
+		// Observability
+		LogLevel:     getEnv("LOG_LEVEL", "info"),
+		LogSalt:      getEnv("LOG_SALT", "dev-log-salt-change-in-production"),
+		OTLPEndpoint: getEnv("OTLP_ENDPOINT", ""),
+		NodeID:       getEnv("NODE_ID", "local"),
+		Version:      getEnv("APP_VERSION", "dev"),
+		Environment:  getEnv("ENVIRONMENT", "development"),
+		ServiceName:  getEnv("SERVICE_NAME", "speedreader-api"),
 	}
 }
 

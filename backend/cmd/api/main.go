@@ -1,49 +1,87 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	_ "github.com/lib/pq"
+	"golang.org/x/exp/slog"
 
 	"github.com/joho/godotenv"
 	"github.com/mikepersonal/speed-reader/backend/internal/auth"
 	"github.com/mikepersonal/speed-reader/backend/internal/config"
 	"github.com/mikepersonal/speed-reader/backend/internal/documents"
 	httpHandler "github.com/mikepersonal/speed-reader/backend/internal/http"
+	"github.com/mikepersonal/speed-reader/backend/internal/logging"
 	"github.com/mikepersonal/speed-reader/backend/internal/sharing"
 	"github.com/mikepersonal/speed-reader/backend/internal/storage"
+	"github.com/mikepersonal/speed-reader/backend/internal/telemetry"
 )
 
 func main() {
-	// Load environment variables
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
+	ctx := context.Background()
+
+	// Load environment variables (ignore error - may not have .env file)
+	_ = godotenv.Load()
 
 	// Load configuration
 	cfg := config.Load()
 
+	// Initialize OpenTelemetry
+	otelShutdown, err := telemetry.InitOTel(ctx, telemetry.Config{
+		ServiceName:  cfg.ServiceName,
+		Version:      cfg.Version,
+		Environment:  cfg.Environment,
+		NodeID:       cfg.NodeID,
+		OTLPEndpoint: cfg.OTLPEndpoint,
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize telemetry: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Create structured logger
+	logger := logging.NewLogger(logging.Config{
+		Level:       cfg.LogLevel,
+		ServiceName: cfg.ServiceName,
+		Version:     cfg.Version,
+		NodeID:      cfg.NodeID,
+		Environment: cfg.Environment,
+	})
+	slog.SetDefault(logger)
+
+	// Create PII sanitizer
+	sanitizer := logging.NewSanitizer(cfg.LogSalt)
+
+	logger.Info("starting application",
+		slog.String("port", cfg.Port),
+		slog.String("environment", cfg.Environment),
+	)
+
 	// Connect to database
 	db, err := sql.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		logger.Error("failed to connect to database", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 	defer db.Close()
 
 	// Verify database connection
 	if err := db.Ping(); err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
+		logger.Error("failed to ping database", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
-	log.Println("Connected to database")
+	logger.Info("connected to database")
 
 	// Create storage directory if it doesn't exist
 	if err := os.MkdirAll(cfg.StoragePath, 0755); err != nil {
-		log.Fatalf("Failed to create storage directory: %v", err)
+		logger.Error("failed to create storage directory", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
 	// Initialize auth services
@@ -68,12 +106,45 @@ func main() {
 		SharingService: sharingService,
 		FrontendURL:    cfg.FrontendURL,
 		SecureCookie:   cfg.SecureCookie,
+		Logger:         logger,
+		Sanitizer:      sanitizer,
 	})
 
-	// Start server
+	// Setup graceful shutdown
+	shutdownCh := make(chan os.Signal, 1)
+	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGTERM)
+
+	// Start server in goroutine
 	addr := fmt.Sprintf(":%s", cfg.Port)
-	log.Printf("Server starting on %s", addr)
-	if err := http.ListenAndServe(addr, router); err != nil {
-		log.Fatalf("Server failed: %v", err)
+	server := &http.Server{
+		Addr:    addr,
+		Handler: router,
 	}
+
+	go func() {
+		logger.Info("server starting", slog.String("addr", addr))
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("server failed", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+	}()
+
+	// Wait for shutdown signal
+	<-shutdownCh
+	logger.Info("shutting down...")
+
+	// Graceful shutdown with timeout
+	shutdownCtx, cancel := context.WithTimeout(ctx, 30*1000*1000*1000) // 30 seconds
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Error("server shutdown failed", slog.String("error", err.Error()))
+	}
+
+	// Shutdown telemetry
+	if err := otelShutdown(shutdownCtx); err != nil {
+		logger.Error("telemetry shutdown failed", slog.String("error", err.Error()))
+	}
+
+	logger.Info("shutdown complete")
 }

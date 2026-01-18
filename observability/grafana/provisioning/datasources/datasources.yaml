@@ -1,0 +1,33 @@
+apiVersion: 1
+
+datasources:
+  # Loki for logs
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: true
+    editable: false
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - datasourceUid: jaeger
+          matcherRegex: '"trace_id":"([a-f0-9]+)"'
+          name: TraceID
+          url: '$${__value.raw}'
+
+  # Jaeger for traces
+  - name: Jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    uid: jaeger
+    editable: false
+    jsonData:
+      tracesToLogs:
+        datasourceUid: Loki
+        tags: ['trace_id']
+        mappedTags: [{ key: 'trace_id', value: 'trace_id' }]
+        mapTagNamesEnabled: true
+        filterByTraceID: true
+        filterBySpanID: false

@@ -1,0 +1,81 @@
+version: "3.8"
+
+services:
+  # OpenTelemetry Collector - receives and routes telemetry
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.88.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # Metrics
+    depends_on:
+      - jaeger
+      - loki
+    networks:
+      - observability
+
+  # Jaeger - distributed tracing UI
+  jaeger:
+    image: jaegertracing/all-in-one:1.51
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # HTTP collector
+    networks:
+      - observability
+
+  # Loki - log aggregation
+  loki:
+    image: grafana/loki:2.9.2
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./observability/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - observability
+
+  # Promtail - log shipping
+  promtail:
+    image: grafana/promtail:2.9.2
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    volumes:
+      - ./observability/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      - /var/log:/var/log:ro
+      - ./backend/logs:/var/log/speedreader:ro
+    depends_on:
+      - loki
+    networks:
+      - observability
+
+  # Grafana - unified dashboards
+  grafana:
+    image: grafana/grafana:10.2.2
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3001:3000"  # Grafana UI (3001 to avoid conflict with frontend)
+    depends_on:
+      - loki
+      - jaeger
+    networks:
+      - observability
+
+networks:
+  observability:
+    driver: bridge
+
+volumes:
+  loki-data:
+  grafana-data:
