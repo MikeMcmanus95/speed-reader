@@ -87,16 +87,62 @@ Interpret creatively and make unexpected choices that feel genuinely designed fo
 **Core engine**: `src/engine/RSVPEngine.ts` - Timing loop using `requestAnimationFrame` with pause multiplier support
 
 **Component hierarchy**:
-- `views/PasteInputView` - Text input with 1MB limit
-- `views/ReaderView` - Main reader, manages RSVPEngine lifecycle
-  - `components/RSVPDisplay` - Word display with pivot highlighting (red center letter)
-  - `components/ControlBar` - Play/pause, WPM slider (100-1000), chunk mode (1-4 words)
-  - `components/ProgressBar` - Seekable position indicator
+- `views/PasteInputView` - Text input with 1MB limit, staggered entry animations
+- `views/ReaderView` - Main reader with vignette background, manages RSVPEngine lifecycle
+  - `components/RSVPDisplay` - Word display with copper pivot glow, Literata font
+  - `components/ControlBar` - Spring-animated amber play button, styled controls
+  - `components/ProgressBar` - Amber track/thumb with glow effects
 
 **Key behaviors**:
 - Prefetches next chunk at 80% through current chunk
 - Auto-saves reading state every 5 seconds
 - Keyboard: Space=toggle, Arrow keys=seek ±10 tokens
+
+#### Design System: "Nocturnal Scholar"
+
+A dark-first design inspired by late-night reading sessions and vintage libraries. Warm amber accents create focused comfort while reducing eye strain.
+
+**Typography** (Google Fonts):
+| Role | Font | Usage |
+|------|------|-------|
+| Primary | Newsreader | Titles, body text (`font-serif`) |
+| RSVP Display | Literata | Speed reading display (`font-rsvp`) |
+| Monospace | IBM Plex Mono | WPM counters, stats (`font-counter`) |
+
+**Color Palette** (`src/index.css` @theme):
+```css
+/* Backgrounds - warm darks */
+--bg-deep: #0f0d0a;      /* Deepest background */
+--bg-base: #1a1714;      /* Page background */
+--bg-elevated: #252119;  /* Cards, modals */
+--bg-surface: #2f2a23;   /* Input fields */
+
+/* Accents */
+--amber-400: #f0a623;    /* Primary accent (buttons, focus) */
+--copper-400: #ef8a4a;   /* Pivot character highlight */
+
+/* Text - warm cream tones */
+--text-primary: #f5f0e8;
+--text-secondary: #c4baa8;
+--text-tertiary: #8a7f6e;
+```
+
+**Animations** (Motion library + CSS keyframes):
+- `animate-fade-in` - Page load staggered reveals
+- `animate-pivot-glow` - Copper glow pulse on pivot character
+- Spring physics on play/pause button (`whileTap`, `stiffness: 400`)
+- Word transitions with AnimatePresence
+
+**Background Utilities**:
+- `bg-grain` - Subtle SVG noise texture overlay
+- `bg-vignette` - Radial gradient focusing attention to center (reader view)
+- `bg-warm-gradient` - Warm diagonal gradient (landing page)
+
+**Component Styling Patterns**:
+- Buttons: Amber with glow shadows (`shadow-[0_0_12px_rgba(240,166,35,0.2)]`)
+- Inputs: Dark surface (`bg-bg-surface`), amber focus ring
+- Cards: Elevated background with subtle borders, backdrop blur
+- Sliders/Toggles: Amber accent on selected/active state
 
 ### Database Schema
 
