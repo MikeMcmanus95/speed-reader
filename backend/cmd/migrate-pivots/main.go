@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/mikepersonal/speed-reader/backend/internal/config"
 	"github.com/mikepersonal/speed-reader/backend/internal/storage"
 	"github.com/mikepersonal/speed-reader/backend/internal/tokenizer"
@@ -77,7 +78,13 @@ func main() {
 		go func() {
 			defer wg.Done()
 			for docDir := range workChan {
-				docID := strings.TrimPrefix(filepath.Base(docDir), "doc_")
+				docIDStr := strings.TrimPrefix(filepath.Base(docDir), "doc_")
+				docID, err := uuid.Parse(docIDStr)
+				if err != nil {
+					log.Printf("Error parsing doc ID %s: %v", docIDStr, err)
+					atomic.AddInt64(&stats.errors, 1)
+					continue
+				}
 				if err := migrateDocument(chunkStore, docDir, docID, *dryRun, stats); err != nil {
 					log.Printf("Error migrating doc %s: %v", docID, err)
 					atomic.AddInt64(&stats.errors, 1)
@@ -154,7 +161,7 @@ func deduplicatePaths(paths []string) []string {
 // Thread safety: Each goroutine processes a unique docID, so file operations don't overlap.
 // The stats struct fields are updated atomically. Local variables (docTokensUpdated, tokensUpdated)
 // are goroutine-local and don't require synchronization.
-func migrateDocument(chunkStore *storage.ChunkStore, docDir, docID string, dryRun bool, stats *migrationStats) error {
+func migrateDocument(chunkStore *storage.ChunkStore, docDir string, docID uuid.UUID, dryRun bool, stats *migrationStats) error {
 	// Find all chunk files
 	entries, err := os.ReadDir(docDir)
 	if err != nil {

@@ -204,7 +204,7 @@ func (h *Handlers) GetTokens(w http.ResponseWriter, r *http.Request) {
 	}
 
 	chunkIndex, err := strconv.Atoi(chunkStr)
-	if err != nil {
+	if err != nil || chunkIndex < 0 {
 		writeError(w, http.StatusBadRequest, "invalid chunk index")
 		return
 	}
@@ -613,7 +613,7 @@ func (h *Handlers) GetSharedDocumentTokens(w http.ResponseWriter, r *http.Reques
 
 	// Get chunks from the chunk store directly
 	chunkStore := h.docService.GetChunkStore()
-	chunk, err := chunkStore.ReadChunk(doc.ID.String(), chunkIndex)
+	chunk, err := chunkStore.ReadChunk(doc.ID, chunkIndex)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err.Error())
 		return

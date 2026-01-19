@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/mikepersonal/speed-reader/backend/internal/auth"
 	"github.com/mikepersonal/speed-reader/backend/internal/config"
@@ -47,6 +48,26 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		// Permissions policy (disable unnecessary browser features)
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 
+		next.ServeHTTP(w, r)
+	})
+}
+
+// RequireJSONContentType validates that requests with bodies have JSON content type
+func RequireJSONContentType(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Skip for methods that don't have bodies
+		if r.Method == http.MethodGet || r.Method == http.MethodHead ||
+			r.Method == http.MethodOptions || r.Method == http.MethodDelete {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		contentType := r.Header.Get("Content-Type")
+		if !strings.HasPrefix(contentType, "application/json") {
+			writeJSON(w, http.StatusUnsupportedMediaType,
+				ErrorResponse{Error: "Content-Type must be application/json"})
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
 }

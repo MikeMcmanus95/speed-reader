@@ -64,6 +64,8 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 		// Document routes (require auth)
 		r.Route("/documents", func(r chi.Router) {
 			r.Use(auth.RequireAuth(deps.AuthService))
+			r.Use(auth.ValidateCSRF(deps.AuthService))
+			r.Use(RequireJSONContentType)
 			r.Use(ContextAwareMaxBodySize) // Apply body size limit after auth so we know user type
 
 			r.Get("/", docHandlers.ListDocuments)
