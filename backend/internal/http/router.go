@@ -72,6 +72,7 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 			r.Put("/{id}", docHandlers.UpdateDocument)
 			r.Delete("/{id}", docHandlers.DeleteDocument)
 			r.Get("/{id}/tokens", docHandlers.GetTokens)
+			r.Get("/{id}/content", docHandlers.GetDocumentContent)
 			r.Get("/{id}/reading-state", docHandlers.GetReadingState)
 			r.Put("/{id}/reading-state", docHandlers.UpdateReadingState)
 

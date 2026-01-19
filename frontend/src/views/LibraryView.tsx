@@ -4,8 +4,9 @@ import { motion } from 'motion/react';
 import { Plus, Library, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DocumentCard } from '../components/DocumentCard';
+import { EditDocumentModal } from '../components/EditDocumentModal';
 import { UserMenu } from '../components/UserMenu';
-import { listDocuments, updateDocument, deleteDocument } from '../api';
+import { listDocuments, deleteDocument } from '../api';
 import type { DocumentWithProgress } from '../types';
 
 function LibraryView() {
@@ -13,6 +14,7 @@ function LibraryView() {
   const [documents, setDocuments] = useState<DocumentWithProgress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingDocument, setEditingDocument] = useState<DocumentWithProgress | null>(null);
 
   const fetchDocuments = useCallback(async () => {
     try {
@@ -30,10 +32,13 @@ function LibraryView() {
     fetchDocuments();
   }, [fetchDocuments]);
 
-  const handleRename = async (id: string, title: string) => {
-    await updateDocument(id, { title });
+  const handleEdit = (document: DocumentWithProgress) => {
+    setEditingDocument(document);
+  };
+
+  const handleUpdate = (updatedDoc: DocumentWithProgress) => {
     setDocuments((prev) =>
-      prev.map((doc) => (doc.id === id ? { ...doc, title } : doc))
+      prev.map((doc) => (doc.id === updatedDoc.id ? updatedDoc : doc))
     );
   };
 
@@ -127,7 +132,7 @@ function LibraryView() {
               <DocumentCard
                 key={doc.id}
                 document={doc}
-                onRename={handleRename}
+                onEdit={handleEdit}
                 onDelete={handleDelete}
                 animationDelay={index * 0.08}
               />
@@ -135,6 +140,13 @@ function LibraryView() {
           </div>
         )}
       </main>
+
+      <EditDocumentModal
+        isOpen={!!editingDocument}
+        onClose={() => setEditingDocument(null)}
+        document={editingDocument}
+        onUpdate={handleUpdate}
+      />
     </div>
   );
 }

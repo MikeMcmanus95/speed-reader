@@ -1,25 +1,21 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Pencil, Trash2, Check, X, BookOpen } from 'lucide-react';
+import { Pencil, Trash2, Check, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import type { DocumentWithProgress } from '../types';
 
 interface DocumentCardProps {
   document: DocumentWithProgress;
-  onRename: (id: string, title: string) => Promise<void>;
+  onEdit: (document: DocumentWithProgress) => void;
   onDelete: (id: string) => Promise<void>;
   animationDelay?: number;
 }
 
-export const DocumentCard = React.memo(function DocumentCard({ document, onRename, onDelete, animationDelay = 0 }: DocumentCardProps) {
+export const DocumentCard = React.memo(function DocumentCard({ document, onEdit, onDelete, animationDelay = 0 }: DocumentCardProps) {
   const navigate = useNavigate();
-  const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [editTitle, setEditTitle] = useState(document.title);
   const [isLoading, setIsLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const progress = document.tokenCount > 0
     ? (document.tokenIndex / document.tokenCount) * 100
@@ -27,44 +23,6 @@ export const DocumentCard = React.memo(function DocumentCard({ document, onRenam
 
   const isCompleted = progress >= 99;
   const hasStarted = document.tokenIndex > 0;
-
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
-
-  const handleSaveRename = async () => {
-    if (!editTitle.trim() || editTitle === document.title) {
-      setIsEditing(false);
-      setEditTitle(document.title);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await onRename(document.id, editTitle.trim());
-      setIsEditing(false);
-    } catch {
-      setEditTitle(document.title);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCancelRename = () => {
-    setEditTitle(document.title);
-    setIsEditing(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSaveRename();
-    } else if (e.key === 'Escape') {
-      handleCancelRename();
-    }
-  };
 
   const handleConfirmDelete = async () => {
     setIsLoading(true);
@@ -133,63 +91,32 @@ export const DocumentCard = React.memo(function DocumentCard({ document, onRenam
             >
               <div className="p-5">
                 <div className="flex items-start justify-between gap-3 mb-4">
-                  {isEditing ? (
-                    <div className="flex-1 flex items-center gap-2">
-                      <Input
-                        ref={inputRef}
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        disabled={isLoading}
-                        className="h-8 text-base"
-                      />
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={handleSaveRename}
-                        disabled={isLoading}
-                        className="h-8 w-8 text-green-500 hover:text-green-400 hover:bg-green-500/10"
-                      >
-                        <Check className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={handleCancelRename}
-                        disabled={isLoading}
-                        className="h-8 w-8 text-text-tertiary hover:text-text-secondary"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <h3
-                        className="font-serif font-medium text-text-primary text-lg leading-tight line-clamp-2 cursor-pointer hover:text-amber-400 transition-colors"
-                        onClick={() => navigate(`/read/${document.id}`)}
-                      >
-                        {document.title}
-                      </h3>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => setIsEditing(true)}
-                          className="h-7 w-7 text-text-tertiary hover:text-amber-400"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => setIsDeleting(true)}
-                          className="h-7 w-7 text-text-tertiary hover:text-destructive"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </>
-                  )}
+                  <h3
+                    className="font-serif font-medium text-text-primary text-lg leading-tight line-clamp-2 cursor-pointer hover:text-amber-400 transition-colors"
+                    onClick={() => navigate(`/read/${document.id}`)}
+                  >
+                    {document.title}
+                  </h3>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => onEdit(document)}
+                      className="h-7 w-7 text-text-tertiary hover:text-amber-400"
+                      title="Edit document"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setIsDeleting(true)}
+                      className="h-7 w-7 text-text-tertiary hover:text-destructive"
+                      title="Delete document"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-text-tertiary font-counter mb-4">

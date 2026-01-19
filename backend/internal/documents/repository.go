@@ -39,6 +39,7 @@ type Document struct {
 	ShareToken *uuid.UUID     `json:"shareToken,omitempty"`
 	ExpiresAt  *time.Time     `json:"expiresAt,omitempty"`
 	CreatedAt  time.Time      `json:"createdAt"`
+	HasContent bool           `json:"hasContent"` // True if original content is stored (for editing)
 }
 
 // ReadingState represents the user's reading progress
@@ -64,6 +65,7 @@ func NewRepository(db *sql.DB) *Repository {
 // CreateParams contains parameters for creating a document
 type CreateParams struct {
 	Title     string
+	Content   string // Original text content for editing
 	UserID    uuid.UUID
 	ExpiresAt *time.Time
 }
@@ -78,15 +80,22 @@ func (r *Repository) Create(ctx context.Context, params *CreateParams) (*Documen
 		Visibility: VisibilityPrivate,
 		ExpiresAt:  params.ExpiresAt,
 		CreatedAt:  time.Now(),
+		HasContent: params.Content != "",
 	}
 
 	query := `
-		INSERT INTO documents (id, user_id, title, status, token_count, chunk_count, visibility, expires_at, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO documents (id, user_id, title, status, token_count, chunk_count, visibility, expires_at, created_at, content)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
+	// Store content as NULL if empty (for backward compatibility)
+	var content *string
+	if params.Content != "" {
+		content = &params.Content
+	}
+
 	_, err := r.db.ExecContext(ctx, query,
-		doc.ID, doc.UserID, doc.Title, doc.Status, doc.TokenCount, doc.ChunkCount, doc.Visibility, doc.ExpiresAt, doc.CreatedAt)
+		doc.ID, doc.UserID, doc.Title, doc.Status, doc.TokenCount, doc.ChunkCount, doc.Visibility, doc.ExpiresAt, doc.CreatedAt, content)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert document: %w", err)
 	}
@@ -97,7 +106,7 @@ func (r *Repository) Create(ctx context.Context, params *CreateParams) (*Documen
 // GetByID retrieves a document by ID
 func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Document, error) {
 	query := `
-		SELECT id, user_id, title, status, token_count, chunk_count, visibility, share_token, expires_at, created_at
+		SELECT id, user_id, title, status, token_count, chunk_count, visibility, share_token, expires_at, created_at, content IS NOT NULL
 		FROM documents
 		WHERE id = $1
 	`
@@ -106,7 +115,7 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Document, erro
 	var userID, shareToken sql.NullString
 	var expiresAt sql.NullTime
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&doc.ID, &userID, &doc.Title, &doc.Status, &doc.TokenCount, &doc.ChunkCount, &doc.Visibility, &shareToken, &expiresAt, &doc.CreatedAt)
+		&doc.ID, &userID, &doc.Title, &doc.Status, &doc.TokenCount, &doc.ChunkCount, &doc.Visibility, &shareToken, &expiresAt, &doc.CreatedAt, &doc.HasContent)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("document not found")
@@ -236,6 +245,7 @@ type DocumentWithProgress struct {
 func (r *Repository) List(ctx context.Context, userID uuid.UUID) ([]DocumentWithProgress, error) {
 	query := `
 		SELECT d.id, d.user_id, d.title, d.status, d.token_count, d.chunk_count, d.visibility, d.share_token, d.expires_at, d.created_at,
+			   d.content IS NOT NULL,
 			   COALESCE(rs.token_index, 0), COALESCE(rs.wpm, 300), COALESCE(rs.updated_at, d.created_at)
 		FROM documents d
 		LEFT JOIN reading_state rs ON d.id = rs.doc_id AND rs.user_id = $1
@@ -256,6 +266,7 @@ func (r *Repository) List(ctx context.Context, userID uuid.UUID) ([]DocumentWith
 		var expiresAt sql.NullTime
 		err := rows.Scan(
 			&doc.ID, &docUserID, &doc.Title, &doc.Status, &doc.TokenCount, &doc.ChunkCount, &doc.Visibility, &shareToken, &expiresAt, &doc.CreatedAt,
+			&doc.HasContent,
 			&doc.TokenIndex, &doc.WPM, &doc.UpdatedAt,
 		)
 		if err != nil {
@@ -289,6 +300,46 @@ func (r *Repository) UpdateTitle(ctx context.Context, id, userID uuid.UUID, titl
 	result, err := r.db.ExecContext(ctx, query, id, title, userID)
 	if err != nil {
 		return fmt.Errorf("failed to update title: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("document not found or not owned by user")
+	}
+
+	return nil
+}
+
+// GetContent retrieves only the content field for a document
+func (r *Repository) GetContent(ctx context.Context, id uuid.UUID) (string, bool, error) {
+	query := `SELECT content FROM documents WHERE id = $1`
+
+	var content sql.NullString
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&content)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", false, fmt.Errorf("document not found")
+		}
+		return "", false, fmt.Errorf("failed to get content: %w", err)
+	}
+
+	if !content.Valid {
+		return "", false, nil // Document exists but has no content (old document)
+	}
+
+	return content.String, true, nil
+}
+
+// UpdateContent updates the content of a document owned by a user
+func (r *Repository) UpdateContent(ctx context.Context, id, userID uuid.UUID, content string) error {
+	query := `UPDATE documents SET content = $2 WHERE id = $1 AND user_id = $3`
+
+	result, err := r.db.ExecContext(ctx, query, id, content, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update content: %w", err)
 	}
 
 	rows, err := result.RowsAffected()
