@@ -32,6 +32,7 @@ function ReaderView() {
   const loadedChunksRef = useRef<Set<number>>(new Set());
   const positionRef = useRef(position);
   const configRef = useRef(config);
+  const hasLoadedReadingStateRef = useRef(false);
 
   const { elapsedFormatted, totalFormatted } = useReadingTimer({
     tokens: loadedTokens,
@@ -123,6 +124,7 @@ function ReaderView() {
 
           setLoadedTokens(engineRef.current.getAllLoadedTokens());
           engineRef.current.setPosition(state.tokenIndex);
+          hasLoadedReadingStateRef.current = true;
         }
 
         setLoading(false);
@@ -138,7 +140,9 @@ function ReaderView() {
   // Auto-save reading state
   useEffect(() => {
     const saveState = () => {
-      if (!id) return;
+      // Don't save if we haven't loaded the reading state yet
+      // This prevents overwriting saved progress with position 0 if user navigates away before load completes
+      if (!id || !hasLoadedReadingStateRef.current) return;
       updateReadingState(id, {
         tokenIndex: positionRef.current,
         wpm: configRef.current.wpm,
