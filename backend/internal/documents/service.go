@@ -50,9 +50,10 @@ func (s *Service) CreateDocument(ctx context.Context, title, content string) (*D
 		expiresAt = &t
 	}
 
-	// Create document record
+	// Create document record (store content for future editing)
 	doc, err := s.repo.Create(ctx, &CreateParams{
 		Title:     title,
+		Content:   content,
 		UserID:    user.ID,
 		ExpiresAt: expiresAt,
 	})
@@ -192,6 +193,98 @@ func (s *Service) UpdateDocumentTitle(ctx context.Context, id uuid.UUID, title s
 	}
 
 	return s.repo.UpdateTitle(ctx, id, user.ID, title)
+}
+
+// GetDocumentContent retrieves the original content of a document for editing
+func (s *Service) GetDocumentContent(ctx context.Context, id uuid.UUID) (string, bool, error) {
+	// Verify document exists and user has access
+	if _, err := s.GetDocument(ctx, id); err != nil {
+		return "", false, err
+	}
+
+	return s.repo.GetContent(ctx, id)
+}
+
+// UpdateDocumentContent updates document content, re-tokenizes, and resets reading state
+func (s *Service) UpdateDocumentContent(ctx context.Context, id uuid.UUID, title, content string) (*Document, error) {
+	user, ok := auth.UserFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("user not found in context")
+	}
+
+	// Verify document exists and user has access
+	doc, err := s.GetDocument(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update title if provided
+	if title != "" && title != doc.Title {
+		if err := s.repo.UpdateTitle(ctx, id, user.ID, title); err != nil {
+			return nil, fmt.Errorf("failed to update title: %w", err)
+		}
+	}
+
+	// Update status to processing
+	if err := s.repo.UpdateStatus(ctx, id, StatusProcessing, doc.TokenCount, doc.ChunkCount); err != nil {
+		return nil, fmt.Errorf("failed to update status: %w", err)
+	}
+
+	// Delete old chunks
+	if err := s.chunkStore.DeleteDocument(id.String()); err != nil {
+		_ = s.repo.UpdateStatus(ctx, id, StatusError, 0, 0)
+		return nil, fmt.Errorf("failed to delete old chunks: %w", err)
+	}
+
+	// Re-tokenize content
+	tokens := tokenizer.Tokenize(content)
+	tokenCount := len(tokens)
+
+	// Write new chunks
+	chunkCount := 0
+	for i := 0; i < tokenCount; i += config.ChunkSize {
+		end := i + config.ChunkSize
+		if end > tokenCount {
+			end = tokenCount
+		}
+
+		if err := s.chunkStore.WriteChunk(id.String(), chunkCount, tokens[i:end]); err != nil {
+			_ = s.repo.UpdateStatus(ctx, id, StatusError, 0, 0)
+			return nil, fmt.Errorf("failed to write chunk %d: %w", chunkCount, err)
+		}
+		chunkCount++
+	}
+
+	// Update content in database
+	if err := s.repo.UpdateContent(ctx, id, user.ID, content); err != nil {
+		return nil, fmt.Errorf("failed to update content: %w", err)
+	}
+
+	// Update document with final status and counts
+	if err := s.repo.UpdateStatus(ctx, id, StatusReady, tokenCount, chunkCount); err != nil {
+		return nil, fmt.Errorf("failed to update document status: %w", err)
+	}
+
+	// Reset reading state to beginning, preserving user's WPM preference
+	wpm := 300 // Default WPM
+	chunkSize := 1
+	if existingState, err := s.repo.GetReadingState(ctx, user.ID, id); err == nil && existingState != nil {
+		wpm = existingState.WPM
+		chunkSize = existingState.ChunkSize
+	}
+
+	state := &ReadingState{
+		UserID:     user.ID,
+		DocID:      id,
+		TokenIndex: 0,
+		WPM:        wpm,
+		ChunkSize:  chunkSize,
+	}
+	// Non-fatal error: reading state reset failure shouldn't fail the content update
+	_ = s.repo.UpsertReadingState(ctx, state)
+
+	// Return updated document
+	return s.GetDocument(ctx, id)
 }
 
 // checkAccess verifies the user has access to a document

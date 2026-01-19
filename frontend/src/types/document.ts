@@ -12,6 +12,7 @@ export interface Document {
   shareToken?: string;
   expiresAt?: string;
   createdAt: string;
+  hasContent: boolean; // True if original content is stored (for editing)
 }
 
 export interface ReadingState {
@@ -41,4 +42,10 @@ export interface DocumentWithProgress extends Document {
 
 export interface UpdateDocumentRequest {
   title: string;
+  content?: string; // Optional: if provided, re-tokenizes and resets reading progress
+}
+
+export interface GetContentResponse {
+  content: string;
+  hasContent: boolean;
 }

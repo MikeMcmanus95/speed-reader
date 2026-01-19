@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/mikepersonal/speed-reader/backend/internal/auth"
+	"github.com/mikepersonal/speed-reader/backend/internal/config"
 	"github.com/mikepersonal/speed-reader/backend/internal/documents"
 	"github.com/mikepersonal/speed-reader/backend/internal/logging"
 	"github.com/mikepersonal/speed-reader/backend/internal/sharing"
@@ -49,7 +50,14 @@ type UpdateReadingStateRequest struct {
 
 // UpdateDocumentRequest represents the request body for updating a document
 type UpdateDocumentRequest struct {
-	Title string `json:"title"`
+	Title   string  `json:"title"`
+	Content *string `json:"content,omitempty"` // Optional: if provided, re-tokenizes and resets reading progress
+}
+
+// GetContentResponse represents the response for getting document content
+type GetContentResponse struct {
+	Content    string `json:"content"`
+	HasContent bool   `json:"hasContent"`
 }
 
 // SetVisibilityRequest represents the request body for setting document visibility
@@ -297,7 +305,10 @@ func (h *Handlers) ListDocuments(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateDocument handles PUT /api/documents/:id
+// If content is provided, the document will be re-tokenized and reading progress will be reset
 func (h *Handlers) UpdateDocument(w http.ResponseWriter, r *http.Request) {
+	we := logging.WideEventFromContext(r.Context())
+
 	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -307,6 +318,9 @@ func (h *Handlers) UpdateDocument(w http.ResponseWriter, r *http.Request) {
 
 	var req UpdateDocumentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if we != nil {
+			we.AddError(err)
+		}
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -316,7 +330,60 @@ func (h *Handlers) UpdateDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if we != nil {
+		we.AddString("doc.id", id.String())
+		we.AddBool("doc.content_update", req.Content != nil)
+	}
+
+	// If content is provided, do a full content update (re-tokenize)
+	if req.Content != nil {
+		if *req.Content == "" {
+			writeError(w, http.StatusBadRequest, "content cannot be empty")
+			return
+		}
+
+		// Enforce content size limit (same as create)
+		user, _ := auth.UserFromContext(r.Context())
+		maxSize := config.MaxGuestPasteSize
+		if user != nil && !user.IsGuest {
+			maxSize = config.MaxAuthPasteSize
+		}
+		if len(*req.Content) > maxSize {
+			writeError(w, http.StatusBadRequest, "content exceeds maximum size")
+			return
+		}
+
+		if we != nil {
+			we.AddInt("doc.content_length", len(*req.Content))
+		}
+
+		doc, err := h.docService.UpdateDocumentContent(r.Context(), id, req.Title, *req.Content)
+		if err != nil {
+			if we != nil {
+				we.AddError(err)
+			}
+			writeError(w, http.StatusInternalServerError, "failed to update document")
+			return
+		}
+
+		if we != nil {
+			we.AddInt("doc.token_count", doc.TokenCount)
+			we.AddInt("doc.chunk_count", doc.ChunkCount)
+		}
+
+		writeJSON(w, http.StatusOK, doc)
+		return
+	}
+
+	// Title-only update
+	if we != nil {
+		we.AddString("doc.title", h.sanitizer.DocumentTitle(req.Title))
+	}
+
 	if err := h.docService.UpdateDocumentTitle(r.Context(), id, req.Title); err != nil {
+		if we != nil {
+			we.AddError(err)
+		}
 		writeError(w, http.StatusNotFound, "document not found")
 		return
 	}
@@ -324,11 +391,51 @@ func (h *Handlers) UpdateDocument(w http.ResponseWriter, r *http.Request) {
 	// Return the updated document
 	doc, err := h.docService.GetDocument(r.Context(), id)
 	if err != nil {
+		if we != nil {
+			we.AddError(err)
+		}
 		writeError(w, http.StatusNotFound, "document not found")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, doc)
+}
+
+// GetDocumentContent handles GET /api/documents/:id/content
+func (h *Handlers) GetDocumentContent(w http.ResponseWriter, r *http.Request) {
+	we := logging.WideEventFromContext(r.Context())
+
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid document ID")
+		return
+	}
+
+	if we != nil {
+		we.AddString("doc.id", id.String())
+	}
+
+	content, hasContent, err := h.docService.GetDocumentContent(r.Context(), id)
+	if err != nil {
+		if we != nil {
+			we.AddError(err)
+		}
+		writeError(w, http.StatusNotFound, "document not found")
+		return
+	}
+
+	if we != nil {
+		we.AddBool("doc.has_content", hasContent)
+		if hasContent {
+			we.AddInt("doc.content_length", len(content))
+		}
+	}
+
+	writeJSON(w, http.StatusOK, GetContentResponse{
+		Content:    content,
+		HasContent: hasContent,
+	})
 }
 
 // DeleteDocument handles DELETE /api/documents/:id

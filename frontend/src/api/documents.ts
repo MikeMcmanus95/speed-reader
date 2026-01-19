@@ -7,6 +7,7 @@ import type {
   ReadingState,
   UpdateReadingStateRequest,
   Chunk,
+  GetContentResponse,
 } from '../types';
 
 const API_BASE = '/api/documents';
@@ -47,4 +48,8 @@ export async function updateReadingState(
     `${API_BASE}/${id}/reading-state`,
     request
   );
+}
+
+export async function getDocumentContent(id: string): Promise<GetContentResponse> {
+  return get<GetContentResponse>(`${API_BASE}/${id}/content`);
 }
