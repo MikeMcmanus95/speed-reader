@@ -1,0 +1,276 @@
+@import "tailwindcss";
+
+/* Import shared theme (for reference, theme is kept locally but shared packages can be used) */
+
+@theme {
+  /* ========================================
+     NOCTURNAL SCHOLAR THEME
+     Warm dark-first design for focused reading
+     ======================================== */
+
+  /* Backgrounds - warm darks */
+  --color-bg-deep: #0f0d0a;
+  --color-bg-base: #1a1714;
+  --color-bg-elevated: #252119;
+  --color-bg-surface: #2f2a23;
+
+  /* Amber accent (lamplight) */
+  --color-amber-300: #f5c03e;
+  --color-amber-400: #f0a623;
+  --color-amber-500: #e08b0d;
+  --color-amber-600: #c46c08;
+
+  /* Copper (pivot character) */
+  --color-copper-400: #ef8a4a;
+  --color-copper-500: #e07339;
+
+  /* Text - warm cream tones */
+  --color-text-primary: #f5f0e8;
+  --color-text-secondary: #c4baa8;
+  --color-text-tertiary: #8a7f6e;
+
+  /* Borders */
+  --color-border: #3d362c;
+  --color-border-subtle: #2a2520;
+
+  /* ShadCN semantic colors - dark theme */
+  --color-background: #1a1714;
+  --color-foreground: #f5f0e8;
+  --color-card: #252119;
+  --color-card-foreground: #f5f0e8;
+  --color-popover: #252119;
+  --color-popover-foreground: #f5f0e8;
+  --color-primary: #f0a623;
+  --color-primary-foreground: #0f0d0a;
+  --color-secondary: #2f2a23;
+  --color-secondary-foreground: #c4baa8;
+  --color-muted: #2f2a23;
+  --color-muted-foreground: #8a7f6e;
+  --color-accent: #3d362c;
+  --color-accent-foreground: #f5f0e8;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #3d362c;
+  --color-input: #3d362c;
+  --color-ring: #f0a623;
+
+  /* Radii */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  /* Font families */
+  --font-sans: 'Newsreader', Georgia, 'Times New Roman', serif;
+  --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+  --font-display: 'Literata', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', 'Monaco', monospace;
+}
+
+/* ========================================
+   KEYFRAME ANIMATIONS
+   ======================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pivotGlow {
+  0%, 100% {
+    text-shadow: 0 0 8px rgba(239, 138, 74, 0.4);
+  }
+  50% {
+    text-shadow: 0 0 16px rgba(239, 138, 74, 0.6);
+  }
+}
+
+@keyframes wordFade {
+  from {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+@utility animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+@utility animate-fade-in-scale {
+  animation: fadeInScale 0.3s ease-out forwards;
+}
+
+@utility animate-pivot-glow {
+  animation: pivotGlow 2s ease-in-out infinite;
+}
+
+@utility animate-word-fade {
+  animation: wordFade 0.15s ease-out forwards;
+}
+
+/* Stagger delays for entry animations */
+@utility delay-100 {
+  animation-delay: 100ms;
+}
+
+@utility delay-200 {
+  animation-delay: 200ms;
+}
+
+@utility delay-300 {
+  animation-delay: 300ms;
+}
+
+@utility delay-400 {
+  animation-delay: 400ms;
+}
+
+/* ========================================
+   BASE STYLES
+   ======================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+}
+
+button {
+  cursor: pointer;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ========================================
+   BACKGROUND TREATMENTS
+   ======================================== */
+
+/* Subtle grain texture overlay */
+.bg-grain {
+  position: relative;
+}
+
+.bg-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Vignette effect for reader view */
+.bg-vignette {
+  background: radial-gradient(
+    ellipse at center,
+    var(--color-bg-base) 0%,
+    var(--color-bg-deep) 100%
+  );
+}
+
+/* Warm diagonal gradient for landing */
+.bg-warm-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-base) 0%,
+    #1e1915 50%,
+    var(--color-bg-deep) 100%
+  );
+}
+
+/* ========================================
+   TYPOGRAPHY
+   ======================================== */
+
+/* RSVP display font */
+.font-rsvp {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
+
+/* Monospace for counters/WPM */
+.font-counter {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ========================================
+   SCROLLBAR STYLING
+   ======================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
+
+/* ========================================
+   FOCUS STYLES
+   ======================================== */
+
+:focus-visible {
+  outline: 2px solid var(--color-amber-400);
+  outline-offset: 2px;
+}
+
+/* ========================================
+   SELECTION
+   ======================================== */
+
+::selection {
+  background-color: var(--color-amber-500);
+  color: var(--color-bg-deep);
+}

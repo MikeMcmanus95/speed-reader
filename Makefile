@@ -1,36 +1,51 @@
-.PHONY: all build run test clean dev db-up db-down frontend backend observability-up observability-down observability-logs
+.PHONY: all build run test clean dev db-up db-down observability-up observability-down observability-logs install
 
 # Default target
 all: build
 
-# Build both frontend and backend
+# Install dependencies (monorepo)
+install:
+	pnpm install
+
+# Build all packages and apps
 build: build-backend build-frontend
+	pnpm build
 
 build-backend:
 	cd backend && go build -o bin/api ./cmd/api
 
 build-frontend:
-	cd frontend && npm run build
+	pnpm --filter @speed-reader/web build
+
+build-extension:
+	pnpm --filter @speed-reader/extension build
 
 # Run in development mode
 dev: db-up
 	@echo "Starting development servers..."
-	@make -j2 dev-backend dev-frontend
+	@make -j2 dev-backend dev-web
 
 dev-backend:
 	cd backend && go run ./cmd/api
 
-dev-frontend:
-	cd frontend && npm run dev
+dev-web:
+	pnpm dev:web
+
+dev-extension:
+	pnpm dev:extension
 
 # Run tests
 test: test-backend test-frontend
+	pnpm test
 
 test-backend:
 	cd backend && go test -v ./...
 
 test-frontend:
-	cd frontend && npm test
+	pnpm --filter @speed-reader/web test:run
+
+test-tokenizer:
+	pnpm --filter @speed-reader/tokenizer test
 
 # Database commands
 db-up:
@@ -48,17 +63,17 @@ db-reset: db-down
 # Clean build artifacts
 clean:
 	rm -rf backend/bin
-	rm -rf frontend/dist
+	rm -rf apps/web/dist
+	rm -rf apps/extension/dist
+	rm -rf packages/*/dist
 	rm -rf data
+	pnpm clean
 
-# Install dependencies
-deps: deps-backend deps-frontend
+# Install dependencies (legacy - kept for compatibility)
+deps: deps-backend install
 
 deps-backend:
 	cd backend && go mod download
-
-deps-frontend:
-	cd frontend && npm install
 
 # Run with production build
 run: build db-up
@@ -77,3 +92,7 @@ o11y-down:
 
 o11y-logs:
 	docker-compose -f docker-compose.observability.yml logs -f
+
+# Type checking
+typecheck:
+	pnpm typecheck

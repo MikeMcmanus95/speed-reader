@@ -10,11 +10,22 @@ backend/bin/
 go.work
 go.work.sum
 
-# Node/Frontend
-frontend/node_modules/
-frontend/dist/
-frontend/.vite/
+# Node/Monorepo
+node_modules/
+.pnpm-store/
+dist/
+build/
 *.local
+.turbo/
+
+# Apps
+apps/*/dist/
+apps/*/.vite/
+apps/*/node_modules/
+
+# Packages
+packages/*/dist/
+packages/*/node_modules/
 
 # Environment
 .env
@@ -44,3 +55,8 @@ data/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+
+# Chrome Extension
+apps/extension/*.pem
+apps/extension/*.crx

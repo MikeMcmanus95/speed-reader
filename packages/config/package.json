@@ -1,0 +1,13 @@
+{
+  "name": "@speed-reader/config",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    "./tailwind": "./tailwind.preset.js",
+    "./tsconfig": "./tsconfig.base.json"
+  },
+  "devDependencies": {
+    "tailwindcss": "^4.1.18"
+  }
+}

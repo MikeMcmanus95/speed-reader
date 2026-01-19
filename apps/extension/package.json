@@ -1,0 +1,34 @@
+{
+  "name": "@speed-reader/extension",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build --mode production",
+    "preview": "vite preview",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@speed-reader/engine": "workspace:*",
+    "@speed-reader/types": "workspace:*",
+    "@speed-reader/ui": "workspace:*",
+    "@speed-reader/api-client": "workspace:*",
+    "@speed-reader/tokenizer": "workspace:*",
+    "dexie": "^4.0.1",
+    "lucide-react": "^0.562.0",
+    "motion": "^12.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.0-beta.23",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/chrome": "^0.0.268",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.4"
+  }
+}
