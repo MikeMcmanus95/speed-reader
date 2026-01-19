@@ -78,7 +78,7 @@ func (s *Service) CreateDocument(ctx context.Context, title, content string) (*D
 			end = tokenCount
 		}
 
-		if err := s.chunkStore.WriteChunk(doc.ID.String(), chunkCount, tokens[i:end]); err != nil {
+		if err := s.chunkStore.WriteChunk(doc.ID, chunkCount, tokens[i:end]); err != nil {
 			// Update status to error
 			_ = s.repo.UpdateStatus(ctx, doc.ID, StatusError, 0, 0)
 			return nil, fmt.Errorf("failed to write chunk %d: %w", chunkCount, err)
@@ -125,7 +125,7 @@ func (s *Service) GetTokens(ctx context.Context, docID uuid.UUID, chunkIndex int
 		return nil, fmt.Errorf("chunk index out of range: %d (max: %d)", chunkIndex, doc.ChunkCount-1)
 	}
 
-	return s.chunkStore.ReadChunk(docID.String(), chunkIndex)
+	return s.chunkStore.ReadChunk(docID, chunkIndex)
 }
 
 // GetReadingState retrieves reading state for a document
@@ -172,7 +172,7 @@ func (s *Service) DeleteDocument(ctx context.Context, id uuid.UUID) error {
 	}
 
 	// Delete chunk files
-	return s.chunkStore.DeleteDocument(id.String())
+	return s.chunkStore.DeleteDocument(id)
 }
 
 // ListDocuments retrieves all documents for the current user with their reading progress
@@ -231,7 +231,7 @@ func (s *Service) UpdateDocumentContent(ctx context.Context, id uuid.UUID, title
 	}
 
 	// Delete old chunks
-	if err := s.chunkStore.DeleteDocument(id.String()); err != nil {
+	if err := s.chunkStore.DeleteDocument(id); err != nil {
 		_ = s.repo.UpdateStatus(ctx, id, StatusError, 0, 0)
 		return nil, fmt.Errorf("failed to delete old chunks: %w", err)
 	}
@@ -248,7 +248,7 @@ func (s *Service) UpdateDocumentContent(ctx context.Context, id uuid.UUID, title
 			end = tokenCount
 		}
 
-		if err := s.chunkStore.WriteChunk(id.String(), chunkCount, tokens[i:end]); err != nil {
+		if err := s.chunkStore.WriteChunk(id, chunkCount, tokens[i:end]); err != nil {
 			_ = s.repo.UpdateStatus(ctx, id, StatusError, 0, 0)
 			return nil, fmt.Errorf("failed to write chunk %d: %w", chunkCount, err)
 		}

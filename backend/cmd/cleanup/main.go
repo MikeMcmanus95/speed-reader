@@ -50,7 +50,7 @@ func main() {
 	// Delete chunk files for each deleted document
 	var chunkDeleteErrors int
 	for _, id := range deletedIDs {
-		if err := chunkStore.DeleteDocument(id.String()); err != nil {
+		if err := chunkStore.DeleteDocument(id); err != nil {
 			log.Printf("Warning: failed to delete chunks for document %s: %v", id, err)
 			chunkDeleteErrors++
 		}

@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 func TestChunkStore_WriteAndRead(t *testing.T) {
@@ -15,7 +17,7 @@ func TestChunkStore_WriteAndRead(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	store := NewChunkStore(tmpDir)
-	docID := "test-doc-123"
+	docID := uuid.New()
 
 	tokens := []Token{
 		{Text: "Hello", Pivot: 1, IsSentenceEnd: false, PauseMultiplier: 1.0},
@@ -29,7 +31,7 @@ func TestChunkStore_WriteAndRead(t *testing.T) {
 	}
 
 	// Verify file exists
-	chunkPath := filepath.Join(tmpDir, "doc_"+docID, "chunk_0.json")
+	chunkPath := filepath.Join(tmpDir, "doc_"+docID.String(), "chunk_0.json")
 	if _, err := os.Stat(chunkPath); os.IsNotExist(err) {
 		t.Error("chunk file was not created")
 	}
@@ -66,7 +68,7 @@ func TestChunkStore_ReadNonexistent(t *testing.T) {
 
 	store := NewChunkStore(tmpDir)
 
-	_, err = store.ReadChunk("nonexistent-doc", 0)
+	_, err = store.ReadChunk(uuid.New(), 0)
 	if err == nil {
 		t.Error("expected error when reading nonexistent chunk")
 	}
@@ -80,7 +82,7 @@ func TestChunkStore_MultipleChunks(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	store := NewChunkStore(tmpDir)
-	docID := "multi-chunk-doc"
+	docID := uuid.New()
 
 	// Write multiple chunks
 	for i := 0; i < 3; i++ {
@@ -114,7 +116,7 @@ func TestChunkStore_DeleteDocument(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	store := NewChunkStore(tmpDir)
-	docID := "to-delete-doc"
+	docID := uuid.New()
 
 	// Create a chunk
 	tokens := []Token{{Text: "test", Pivot: 1}}
@@ -130,7 +132,7 @@ func TestChunkStore_DeleteDocument(t *testing.T) {
 	}
 
 	// Verify directory is gone
-	docDir := filepath.Join(tmpDir, "doc_"+docID)
+	docDir := filepath.Join(tmpDir, "doc_"+docID.String())
 	if _, err := os.Stat(docDir); !os.IsNotExist(err) {
 		t.Error("document directory should be deleted")
 	}

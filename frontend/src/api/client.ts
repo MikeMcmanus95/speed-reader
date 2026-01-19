@@ -20,13 +20,27 @@ export function setRefreshTokenFn(fn: () => Promise<string | null>) {
   refreshTokenFn = fn;
 }
 
-async function getAuthHeaders(): Promise<HeadersInit> {
+// Extract CSRF token from cookies
+function getCSRFToken(): string | null {
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+async function getAuthHeaders(includeCSRF: boolean = false): Promise<HeadersInit> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
 
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+
+  // Add CSRF token for state-changing requests
+  if (includeCSRF) {
+    const csrfToken = getCSRFToken();
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
   }
 
   return headers;
@@ -65,7 +79,7 @@ export async function post<T, B>(url: string, body: B): Promise<T> {
   const makeRequest = async (): Promise<T> => {
     const response = await fetch(url, {
       method: 'POST',
-      headers: await getAuthHeaders(),
+      headers: await getAuthHeaders(true),
       credentials: 'include',
       body: JSON.stringify(body),
     });
@@ -78,7 +92,7 @@ export async function put<T, B>(url: string, body: B): Promise<T> {
   const makeRequest = async (): Promise<T> => {
     const response = await fetch(url, {
       method: 'PUT',
-      headers: await getAuthHeaders(),
+      headers: await getAuthHeaders(true),
       credentials: 'include',
       body: JSON.stringify(body),
     });
@@ -91,7 +105,7 @@ export async function del(url: string): Promise<void> {
   const makeRequest = async (): Promise<void> => {
     const response = await fetch(url, {
       method: 'DELETE',
-      headers: await getAuthHeaders(),
+      headers: await getAuthHeaders(true),
       credentials: 'include',
     });
     if (response.status === 401 && refreshTokenFn) {
