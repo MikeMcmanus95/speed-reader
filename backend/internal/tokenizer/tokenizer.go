@@ -176,9 +176,14 @@ func calculatePauseMultiplier(word string, isParagraphEnd bool) float64 {
 	}
 }
 
-// stripPunctuation removes punctuation from a word for pivot calculation
-func stripPunctuation(word string) string {
+// StripPunctuation removes punctuation from a word for pivot calculation
+func StripPunctuation(word string) string {
 	return strings.TrimFunc(word, func(r rune) bool {
 		return unicode.IsPunct(r)
 	})
+}
+
+// stripPunctuation is an alias for internal use (maintains backward compatibility)
+func stripPunctuation(word string) string {
+	return StripPunctuation(word)
 }
