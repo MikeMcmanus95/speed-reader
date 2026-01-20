@@ -22,8 +22,8 @@ export const CompactControlBar = React.memo(function CompactControlBar({
 }: CompactControlBarProps) {
   return (
     <div className="flex flex-col gap-3 p-3 bg-bg-surface rounded-xl">
-      {/* Play button and WPM row */}
-      <div className="flex items-center gap-3">
+      {/* Centered play button */}
+      <div className="flex justify-center">
         <motion.div
           whileTap={{ scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 400, damping: 17 }}
@@ -48,26 +48,27 @@ export const CompactControlBar = React.memo(function CompactControlBar({
             </motion.div>
           </Button>
         </motion.div>
-
-        <div className="flex-1 flex items-center gap-2">
-          <span className="text-[10px] font-counter font-medium text-text-tertiary uppercase tracking-widest">
-            WPM
-          </span>
-          <Slider
-            value={[wpm]}
-            min={100}
-            max={1000}
-            step={25}
-            onValueChange={([value]) => onWpmChange(value)}
-            className="flex-1"
-          />
-          <span className="min-w-9 font-counter text-xs font-semibold text-amber-400 tabular-nums">
-            {wpm}
-          </span>
-        </div>
       </div>
 
-      {/* Chunk size row */}
+      {/* WPM row */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-counter font-medium text-text-tertiary uppercase tracking-widest">
+          WPM
+        </span>
+        <Slider
+          value={[wpm]}
+          min={100}
+          max={1000}
+          step={25}
+          onValueChange={([value]) => onWpmChange(value)}
+          className="flex-1"
+        />
+        <span className="min-w-9 font-counter text-xs font-semibold text-amber-400 tabular-nums">
+          {wpm}
+        </span>
+      </div>
+
+      {/* Words row */}
       <div className="flex items-center justify-center gap-2">
         <span className="text-[10px] font-counter font-medium text-text-tertiary uppercase tracking-widest">
           Words
