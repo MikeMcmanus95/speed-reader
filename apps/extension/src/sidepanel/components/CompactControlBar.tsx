@@ -61,7 +61,7 @@ export const CompactControlBar = React.memo(function CompactControlBar({
           max={1000}
           step={25}
           onValueChange={([value]) => onWpmChange(value)}
-          className="flex-1"
+          className="flex-1 min-w-20"
         />
         <span className="min-w-9 font-counter text-xs font-semibold text-amber-400 tabular-nums">
           {wpm}
