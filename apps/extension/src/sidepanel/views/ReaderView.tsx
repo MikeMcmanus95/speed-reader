@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { RSVPDisplay, ControlBar, ProgressBar, Button } from '@speed-reader/ui';
+import { RSVPDisplay, ProgressBar, Button } from '@speed-reader/ui';
 import { RSVPEngine, type RSVPConfig } from '@speed-reader/engine';
 import type { Token } from '@speed-reader/types';
 import {
@@ -10,16 +10,19 @@ import {
   saveReadingState,
   type LocalDocument,
 } from '../../storage/db';
+import { CompactControlBar } from '../components/CompactControlBar';
 
 interface ReaderViewProps {
   docId: string;
   onBack: () => void;
+  autoPlay?: boolean;
+  onAutoPlayConsumed?: () => void;
 }
 
 const TOKENS_PER_CHUNK = 5000;
 const SAVE_INTERVAL = 5000;
 
-export function ReaderView({ docId, onBack }: ReaderViewProps) {
+export function ReaderView({ docId, onBack, autoPlay, onAutoPlayConsumed }: ReaderViewProps) {
   const [document, setDocument] = useState<LocalDocument | null>(null);
   const [currentTokens, setCurrentTokens] = useState<Token[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -33,9 +36,13 @@ export function ReaderView({ docId, onBack }: ReaderViewProps) {
   const positionRef = useRef(position);
   const configRef = useRef(config);
   const hasLoadedStateRef = useRef(false);
+  const hasAutoPlayedRef = useRef(false);
 
   // Initialize engine
   useEffect(() => {
+    // Reset autoPlay guard when document changes
+    hasAutoPlayedRef.current = false;
+
     const engine = new RSVPEngine({
       onTokenChange: (tokens) => setCurrentTokens(tokens),
       onStateChange: (playing) => setIsPlaying(playing),
@@ -157,6 +164,19 @@ export function ReaderView({ docId, onBack }: ReaderViewProps) {
   useEffect(() => { positionRef.current = position; }, [position]);
   useEffect(() => { configRef.current = config; }, [config]);
 
+  // Auto-play when triggered from context menu or keyboard shortcut
+  useEffect(() => {
+    if (!loading && autoPlay && engineRef.current && !hasAutoPlayedRef.current) {
+      hasAutoPlayedRef.current = true;
+      // Small delay to ensure UI is ready
+      const timer = setTimeout(() => {
+        engineRef.current?.play();
+        onAutoPlayConsumed?.();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, autoPlay, onAutoPlayConsumed]);
+
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -234,13 +254,13 @@ export function ReaderView({ docId, onBack }: ReaderViewProps) {
         <RSVPDisplay tokens={currentTokens} />
       </main>
 
-      <footer className="flex flex-col gap-3 p-3 bg-bg-elevated/80 backdrop-blur-sm border-t border-border-subtle">
+      <footer className="flex flex-col gap-2 p-2 bg-bg-elevated/80 backdrop-blur-sm border-t border-border-subtle">
         <ProgressBar
           current={position}
           total={document?.tokenCount || 0}
           onSeek={handleSeek}
         />
-        <ControlBar
+        <CompactControlBar
           isPlaying={isPlaying}
           wpm={config.wpm}
           chunkSize={config.chunkSize}
