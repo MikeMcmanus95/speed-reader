@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { BookOpen, Library } from 'lucide-react';
 import { Button, Textarea } from '@speed-reader/ui';
 import { tokenize, chunkTokens } from '@speed-reader/tokenizer';
-import { saveDocument, saveChunks } from '../../storage/db';
+import { saveDocument, saveChunks, type LocalDocument } from '../../storage/db';
+import { useAuth } from '../../auth/AuthContext';
+import { getSyncManager } from '../../sync/SyncManager';
 
 interface HomeViewProps {
   onNavigate: (view: 'home' | 'reader' | 'library', docId?: string) => void;
@@ -13,6 +15,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
   const [text, setText] = useState('');
   const [title, setTitle] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
@@ -27,19 +30,31 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       const docId = crypto.randomUUID();
       const now = Date.now();
 
-      await saveDocument({
+      const doc: LocalDocument = {
         id: docId,
         title: title.trim() || extractTitle(text),
         source: 'manual',
+        content: text, // Store raw content for syncing
         createdAt: now,
         updatedAt: now,
         tokenCount: tokens.length,
         chunkCount: chunks.length,
-        syncStatus: 'local',
+        // Mark as pending if authenticated (will sync), local otherwise
+        syncStatus: isAuthenticated ? 'pending' : 'local',
         lastSyncedAt: null,
-      });
+      };
 
+      await saveDocument(doc);
       await saveChunks(docId, chunks);
+
+      // Trigger sync if authenticated
+      if (isAuthenticated) {
+        try {
+          getSyncManager().syncDocument(docId).catch(console.error);
+        } catch {
+          // SyncManager not initialized yet
+        }
+      }
 
       onNavigate('reader', docId);
     } catch (error) {

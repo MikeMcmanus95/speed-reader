@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Trash2, Clock } from 'lucide-react';
+import { ArrowLeft, Trash2, Clock, Cloud, CloudOff, AlertCircle } from 'lucide-react';
 import { Button, Card } from '@speed-reader/ui';
 import { getAllDocuments, deleteDocument, type LocalDocument } from '../../storage/db';
+import { LoginButton } from '../components/LoginButton';
+import { SyncIndicator } from '../components/SyncIndicator';
+import { useSyncStatus } from '../../sync/useSyncStatus';
 
 interface LibraryViewProps {
   onSelect: (docId: string) => void;
@@ -51,8 +54,11 @@ export function LibraryView({ onSelect, onBack }: LibraryViewProps) {
         </Button>
         <h1 className="text-lg font-semibold">Library</h1>
         <span className="text-sm text-text-tertiary">
-          ({documents.length} documents)
+          ({documents.length})
         </span>
+        <div className="flex-1" />
+        <SyncIndicator />
+        <LoginButton />
       </header>
 
       {loading ? (
@@ -79,7 +85,10 @@ export function LibraryView({ onSelect, onBack }: LibraryViewProps) {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <h2 className="font-medium truncate">{doc.title}</h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-medium truncate">{doc.title}</h2>
+                      <SyncStatusIcon status={doc.syncStatus} />
+                    </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-text-tertiary">
                       <span>{doc.tokenCount.toLocaleString()} words</span>
                       <span className="flex items-center gap-1">
@@ -104,4 +113,34 @@ export function LibraryView({ onSelect, onBack }: LibraryViewProps) {
       )}
     </div>
   );
+}
+
+function SyncStatusIcon({ status }: { status: LocalDocument['syncStatus'] }) {
+  switch (status) {
+    case 'synced':
+      return (
+        <span title="Synced">
+          <Cloud className="w-3 h-3 text-green-500" />
+        </span>
+      );
+    case 'pending':
+      return (
+        <span title="Pending sync">
+          <Cloud className="w-3 h-3 text-amber-400" />
+        </span>
+      );
+    case 'error':
+      return (
+        <span title="Sync error">
+          <AlertCircle className="w-3 h-3 text-destructive" />
+        </span>
+      );
+    case 'local':
+    default:
+      return (
+        <span title="Local only">
+          <CloudOff className="w-3 h-3 text-text-tertiary" />
+        </span>
+      );
+  }
 }

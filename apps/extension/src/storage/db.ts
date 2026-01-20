@@ -6,12 +6,14 @@ export interface LocalDocument {
   id: string;
   title: string;
   source: string;
+  content: string; // Raw text content for syncing to backend
   createdAt: number;
   updatedAt: number;
   tokenCount: number;
   chunkCount: number;
   syncStatus: 'local' | 'synced' | 'pending' | 'error';
   lastSyncedAt: number | null;
+  remoteId?: string; // Backend document ID (may differ from local ID)
 }
 
 // Token chunk
@@ -44,6 +46,22 @@ export class SpeedReaderDB extends Dexie {
       documents: 'id, createdAt, updatedAt, syncStatus',
       chunks: '[docId+chunkIndex], docId',
       readingStates: 'docId, updatedAt',
+    });
+
+    // Version 2: Add content and remoteId fields
+    this.version(2).stores({
+      documents: 'id, createdAt, updatedAt, syncStatus, remoteId',
+      chunks: '[docId+chunkIndex], docId',
+      readingStates: 'docId, updatedAt',
+    }).upgrade(tx => {
+      return tx.table('documents').toCollection().modify(doc => {
+        if (doc.content === undefined) {
+          doc.content = '';
+        }
+        if (doc.remoteId === undefined) {
+          doc.remoteId = undefined;
+        }
+      });
     });
   }
 }
@@ -157,4 +175,35 @@ export async function getStorageInfo(): Promise<{
     totalTokens,
     estimatedSize,
   };
+}
+
+// Get documents by sync status
+export async function getDocumentsBySyncStatus(
+  status: LocalDocument['syncStatus']
+): Promise<LocalDocument[]> {
+  return db.documents.where('syncStatus').equals(status).toArray();
+}
+
+// Get pending documents (need to be synced)
+export async function getPendingDocuments(): Promise<LocalDocument[]> {
+  return db.documents.where('syncStatus').anyOf(['pending', 'local']).toArray();
+}
+
+// Update document sync status
+export async function updateDocumentSyncStatus(
+  docId: string,
+  status: LocalDocument['syncStatus'],
+  remoteId?: string,
+  lastSyncedAt?: number
+): Promise<void> {
+  const updates: Partial<LocalDocument> = { syncStatus: status };
+  if (remoteId !== undefined) updates.remoteId = remoteId;
+  if (lastSyncedAt !== undefined) updates.lastSyncedAt = lastSyncedAt;
+  await db.documents.update(docId, updates);
+}
+
+// Check if document has remote tokens (chunks exist locally)
+export async function hasLocalChunks(docId: string): Promise<boolean> {
+  const count = await db.chunks.where('docId').equals(docId).count();
+  return count > 0;
 }

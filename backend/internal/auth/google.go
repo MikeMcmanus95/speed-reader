@@ -47,9 +47,48 @@ func (g *GoogleOAuth) GetAuthURL(state string) string {
 	return g.config.AuthCodeURL(state, oauth2.AccessTypeOffline)
 }
 
+// GetExtensionAuthURL returns the URL for the OAuth consent screen for Chrome extensions
+// This uses a different redirect URL that points to the extension callback endpoint
+func (g *GoogleOAuth) GetExtensionAuthURL(state string) string {
+	// Create a copy of config with extension-specific redirect URL
+	extConfig := &oauth2.Config{
+		ClientID:     g.config.ClientID,
+		ClientSecret: g.config.ClientSecret,
+		RedirectURL:  g.getExtensionRedirectURL(),
+		Scopes:       g.config.Scopes,
+		Endpoint:     g.config.Endpoint,
+	}
+	return extConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
+}
+
+// getExtensionRedirectURL extracts the base URL and creates the extension callback URL
+func (g *GoogleOAuth) getExtensionRedirectURL() string {
+	// The original redirect URL is like: http://localhost:8080/api/auth/google/callback
+	// We need: http://localhost:8080/api/auth/extension/google/callback
+	// Simple string replacement
+	return g.config.RedirectURL[:len(g.config.RedirectURL)-len("/google/callback")] + "/extension/google/callback"
+}
+
 // ExchangeCode exchanges an authorization code for tokens
 func (g *GoogleOAuth) ExchangeCode(ctx context.Context, code string) (*oauth2.Token, error) {
 	token, err := g.config.Exchange(ctx, code)
+	if err != nil {
+		return nil, fmt.Errorf("failed to exchange code: %w", err)
+	}
+	return token, nil
+}
+
+// ExchangeCodeForExtension exchanges an authorization code for tokens using the extension redirect URL
+func (g *GoogleOAuth) ExchangeCodeForExtension(ctx context.Context, code string) (*oauth2.Token, error) {
+	// Create a copy of config with extension-specific redirect URL
+	extConfig := &oauth2.Config{
+		ClientID:     g.config.ClientID,
+		ClientSecret: g.config.ClientSecret,
+		RedirectURL:  g.getExtensionRedirectURL(),
+		Scopes:       g.config.Scopes,
+		Endpoint:     g.config.Endpoint,
+	}
+	token, err := extConfig.Exchange(ctx, code)
 	if err != nil {
 		return nil, fmt.Errorf("failed to exchange code: %w", err)
 	}

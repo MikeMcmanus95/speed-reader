@@ -37,7 +37,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     // Request full page text from content script
     chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_TEXT' }, (response) => {
       if (response?.text) {
-        handleTextSelection(response.text, tab.url || 'Unknown', false);
+        handleTextSelection(response.text, tab.url || 'Unknown', true);
       }
     });
   }
@@ -54,16 +54,22 @@ async function handleTextSelection(text: string, source: string, autoPlay: boole
     const docId = crypto.randomUUID();
     const now = Date.now();
 
+    // Check if user is authenticated
+    const authResult = await chrome.storage.local.get('auth_state');
+    const isAuthenticated = !!authResult.auth_state?.accessToken;
+
     // Create document object
     const doc: LocalDocument = {
       id: docId,
       title: extractTitle(text),
       source,
+      content: text, // Store raw content for syncing
       createdAt: now,
       updatedAt: now,
       tokenCount: tokens.length,
       chunkCount: chunks.length,
-      syncStatus: 'local',
+      // Mark as pending if authenticated (will sync), local otherwise
+      syncStatus: isAuthenticated ? 'pending' : 'local',
       lastSyncedAt: null,
     };
 
@@ -73,10 +79,18 @@ async function handleTextSelection(text: string, source: string, autoPlay: boole
 
     // Set pending document flag in chrome.storage.local
     // This notifies the sidepanel to load this document
-    // Include autoPlay flag to start playback immediately
-    await chrome.storage.local.set({ pendingDocument: docId, autoPlay });
+    // Combine docId and autoPlay in a single object to ensure atomicity
+    // (Chrome may fire separate change events for separate keys)
+    await chrome.storage.local.set({ pendingDocument: { docId, autoPlay } });
 
     console.log(`Created document ${docId} with ${tokens.length} tokens (autoPlay: ${autoPlay})`);
+
+    // Notify sidepanel to trigger sync if authenticated
+    if (isAuthenticated) {
+      chrome.runtime.sendMessage({ type: 'DOCUMENT_CREATED', docId }).catch(() => {
+        // Sidepanel might not be open, that's fine
+      });
+    }
   } catch (error) {
     console.error('Failed to process text:', error);
   }
