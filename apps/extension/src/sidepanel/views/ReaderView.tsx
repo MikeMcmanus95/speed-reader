@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { RSVPDisplay, ProgressBar, Button } from '@speed-reader/ui';
+import { ProgressBar, Button } from '@speed-reader/ui';
 import { RSVPEngine, type RSVPConfig } from '@speed-reader/engine';
 import type { Token } from '@speed-reader/types';
 import {
@@ -11,6 +11,7 @@ import {
   type LocalDocument,
 } from '../../storage/db';
 import { CompactControlBar } from '../components/CompactControlBar';
+import { ExtensionRSVPDisplay } from '../components/ExtensionRSVPDisplay';
 
 interface ReaderViewProps {
   docId: string;
@@ -251,7 +252,7 @@ export function ReaderView({ docId, onBack, autoPlay, onAutoPlayConsumed }: Read
       </header>
 
       <main className="flex-1 flex items-center justify-center p-4">
-        <RSVPDisplay tokens={currentTokens} />
+        <ExtensionRSVPDisplay tokens={currentTokens} />
       </main>
 
       <footer className="flex flex-col gap-2 p-2 bg-bg-elevated/80 backdrop-blur-sm border-t border-border-subtle">
