@@ -1,13 +1,12 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Share2 } from 'lucide-react';
-import { RSVPDisplay, ControlBar, ProgressBar, Button } from '@speed-reader/ui';
+import { RSVPDisplay, ControlBar, ProgressBar, Button, useReadingTimer } from '@speed-reader/ui';
 import { RSVPEngine, type RSVPConfig } from '@speed-reader/engine';
 import { getDocument, getTokens, getReadingState, updateReadingState } from '@speed-reader/api-client';
 import type { Document, Token } from '@speed-reader/types';
 import { UserMenu } from '../components/UserMenu';
 import { ShareModal } from '../components/ShareModal';
-import { useReadingTimer } from '../hooks/useReadingTimer';
 
 const TOKENS_PER_CHUNK = 5000;
 const SAVE_INTERVAL = 5000; // 5 seconds

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { ProgressBar, Button } from '@speed-reader/ui';
+import { ProgressBar, Button, useReadingTimer } from '@speed-reader/ui';
 import { RSVPEngine, type RSVPConfig } from '@speed-reader/engine';
 import type { Token } from '@speed-reader/types';
 import {
@@ -26,6 +26,7 @@ const SAVE_INTERVAL = 5000;
 export function ReaderView({ docId, onBack, autoPlay, onAutoPlayConsumed }: ReaderViewProps) {
   const [document, setDocument] = useState<LocalDocument | null>(null);
   const [currentTokens, setCurrentTokens] = useState<Token[]>([]);
+  const [loadedTokens, setLoadedTokens] = useState<Token[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [config, setConfig] = useState<RSVPConfig>({ wpm: 300, chunkSize: 1 });
@@ -38,6 +39,13 @@ export function ReaderView({ docId, onBack, autoPlay, onAutoPlayConsumed }: Read
   const configRef = useRef(config);
   const hasLoadedStateRef = useRef(false);
   const hasAutoPlayedRef = useRef(false);
+
+  const { elapsedFormatted, totalFormatted } = useReadingTimer({
+    tokens: loadedTokens,
+    currentIndex: position,
+    totalTokens: document?.tokenCount || 0,
+    wpm: config.wpm,
+  });
 
   // Initialize engine
   useEffect(() => {
@@ -104,6 +112,11 @@ export function ReaderView({ docId, onBack, autoPlay, onAutoPlayConsumed }: Read
           }
         }
 
+        // Set loadedTokens for timer calculation
+        if (engineRef.current) {
+          setLoadedTokens(engineRef.current.getAllLoadedTokens());
+        }
+
         // Set position after chunks are loaded
         if (state) {
           engineRef.current?.setPosition(state.tokenIndex);
@@ -134,6 +147,9 @@ export function ReaderView({ docId, onBack, autoPlay, onAutoPlayConsumed }: Read
           document.tokenCount,
           TOKENS_PER_CHUNK
         );
+        if (engineRef.current) {
+          setLoadedTokens(engineRef.current.getAllLoadedTokens());
+        }
       }
     } catch (err) {
       console.error(`Failed to load chunk ${chunkIndex}:`, err);
@@ -260,6 +276,8 @@ export function ReaderView({ docId, onBack, autoPlay, onAutoPlayConsumed }: Read
           current={position}
           total={document?.tokenCount || 0}
           onSeek={handleSeek}
+          elapsedTime={elapsedFormatted}
+          totalTime={totalFormatted}
         />
         <CompactControlBar
           isPlaying={isPlaying}
