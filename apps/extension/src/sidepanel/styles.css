@@ -200,3 +200,20 @@ button {
   background-color: var(--color-amber-500);
   color: var(--color-bg-deep);
 }
+
+/* ========================================
+   EXTENSION-SPECIFIC RSVP DISPLAY OVERRIDES
+   The sidepanel is ~300-400px wide (below md: breakpoint),
+   so we need larger font sizes than mobile defaults.
+   ======================================== */
+
+/* Single word mode and empty state: 36px (between mobile 30px and desktop 48px) */
+.extension-rsvp-display .font-rsvp {
+  font-size: 2.25rem !important;
+}
+
+/* Multi-word chunk mode: 28px (between mobile 24px and desktop 36px)
+   Combined selector ensures higher specificity than the generic .font-rsvp rule above */
+.extension-rsvp-display [data-testid="rsvp-chunk"].font-rsvp {
+  font-size: 1.75rem !important;
+}
