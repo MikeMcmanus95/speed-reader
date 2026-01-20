@@ -39,6 +39,8 @@ func main() {
 		Environment:  cfg.Environment,
 		NodeID:       cfg.NodeID,
 		OTLPEndpoint: cfg.OTLPEndpoint,
+		AxiomToken:   cfg.AxiomToken,
+		AxiomDataset: cfg.AxiomDataset,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize telemetry: %v\n", err)

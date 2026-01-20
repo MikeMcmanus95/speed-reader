@@ -22,6 +22,8 @@ type Config struct {
 	Environment  string
 	NodeID       string
 	OTLPEndpoint string // empty = use stdout exporter
+	AxiomToken   string // Axiom API token (for Authorization header)
+	AxiomDataset string // Axiom dataset name (for X-Axiom-Dataset header)
 }
 
 // ShutdownFunc is called to gracefully shutdown telemetry
@@ -46,11 +48,27 @@ func InitOTel(ctx context.Context, cfg Config) (ShutdownFunc, error) {
 	// Create exporter based on configuration
 	var exporter sdktrace.SpanExporter
 	if cfg.OTLPEndpoint != "" {
-		// Production: OTLP gRPC exporter
-		exporter, err = otlptracegrpc.New(ctx,
+		// Build OTLP options
+		opts := []otlptracegrpc.Option{
 			otlptracegrpc.WithEndpoint(cfg.OTLPEndpoint),
-			otlptracegrpc.WithInsecure(), // TODO: Make TLS configurable
-		)
+		}
+
+		// Add Axiom-specific headers if token is provided
+		if cfg.AxiomToken != "" {
+			headers := map[string]string{
+				"Authorization": "Bearer " + cfg.AxiomToken,
+			}
+			if cfg.AxiomDataset != "" {
+				headers["X-Axiom-Dataset"] = cfg.AxiomDataset
+			}
+			opts = append(opts, otlptracegrpc.WithHeaders(headers))
+		} else {
+			// No auth - assume local collector, use insecure
+			opts = append(opts, otlptracegrpc.WithInsecure())
+		}
+
+		// Production: OTLP gRPC exporter
+		exporter, err = otlptracegrpc.New(ctx, opts...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create OTLP exporter: %w", err)
 		}

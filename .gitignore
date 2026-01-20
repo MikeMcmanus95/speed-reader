@@ -32,6 +32,7 @@ packages/*/node_modules/
 .env.local
 .env.*.local
 backend/.env
+.env.production
 
 # IDE
 .idea/

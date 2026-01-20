@@ -40,13 +40,15 @@ type Config struct {
 	SecureCookie       bool
 
 	// Observability configuration
-	LogLevel    string // debug, info, warn, error
-	LogSalt     string // secret for PII pseudonymization
+	LogLevel     string // debug, info, warn, error
+	LogSalt      string // secret for PII pseudonymization
 	OTLPEndpoint string // OTLP gRPC endpoint (empty = stdout)
-	NodeID      string // instance identifier
-	Version     string // app version
-	Environment string // development, staging, production
-	ServiceName string // service name for tracing
+	AxiomToken   string // Axiom API token for cloud tracing
+	AxiomDataset string // Axiom dataset name
+	NodeID       string // instance identifier
+	Version      string // app version
+	Environment  string // development, staging, production
+	ServiceName  string // service name for tracing
 }
 
 // Load reads configuration from environment variables
@@ -58,8 +60,14 @@ func Load() *Config {
 
 	secureCookie := getEnv("SECURE_COOKIE", "false") == "true"
 
+	// Check SERVER_PORT first (to avoid Railway PostgreSQL PORT conflict), then PORT
+	port := getEnv("SERVER_PORT", "")
+	if port == "" {
+		port = getEnv("PORT", "8080")
+	}
+
 	return &Config{
-		Port:               getEnv("PORT", "8080"),
+		Port:               port,
 		DatabaseURL:        getEnv("DATABASE_URL", "postgres://speedreader:speedreader@localhost:5432/speedreader?sslmode=disable"),
 		StoragePath:        getEnv("STORAGE_PATH", "./data"),
 		JWTSecret:          getEnv("JWT_SECRET", "dev-jwt-secret-change-in-production"),
@@ -75,6 +83,8 @@ func Load() *Config {
 		LogLevel:     getEnv("LOG_LEVEL", "info"),
 		LogSalt:      getEnv("LOG_SALT", "dev-log-salt-change-in-production"),
 		OTLPEndpoint: getEnv("OTLP_ENDPOINT", ""),
+		AxiomToken:   getEnv("AXIOM_TOKEN", ""),
+		AxiomDataset: getEnv("AXIOM_DATASET", ""),
 		NodeID:       getEnv("NODE_ID", "local"),
 		Version:      getEnv("APP_VERSION", "dev"),
 		Environment:  getEnv("ENVIRONMENT", "development"),
