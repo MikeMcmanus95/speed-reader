@@ -36,6 +36,10 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     chrome.sidePanel.open({ windowId: tab.windowId });
     // Request full page text from content script
     chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_TEXT' }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.warn('Failed to get page text:', chrome.runtime.lastError.message);
+        return;
+      }
       if (response?.text) {
         handleTextSelection(response.text, tab.url || 'Unknown', true);
       }
@@ -112,6 +116,10 @@ chrome.commands.onCommand.addListener(async (command) => {
       chrome.sidePanel.open({ windowId: tab.windowId });
       // Then get selection and process with autoPlay enabled
       chrome.tabs.sendMessage(tab.id, { type: 'GET_SELECTION' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn('Failed to get selection:', chrome.runtime.lastError.message);
+          return;
+        }
         if (response?.text) {
           handleTextSelection(response.text, tab.url || 'Unknown', true);
         }

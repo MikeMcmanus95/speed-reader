@@ -49,7 +49,11 @@ function AppContent() {
   const [currentDocId, setCurrentDocId] = useState<string | null>(null);
   const [autoPlay, setAutoPlay] = useState(false);
 
-  // Listen for new documents from background script
+  // Robust polling mechanism for pending documents
+  // This handles timing issues where:
+  // 1. Sidepanel opens before service worker sets the pending document
+  // 2. Storage listener isn't attached yet when document is created
+  // 3. Multiple browser windows race to consume the pending document
   useEffect(() => {
     let cancelled = false;
 
