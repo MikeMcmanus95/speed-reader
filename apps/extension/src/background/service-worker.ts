@@ -29,22 +29,22 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'speed-read-selection' && info.selectionText) {
     // Open side panel immediately (must be synchronous for user gesture)
     chrome.sidePanel.open({ windowId: tab.windowId });
-    // Then process text asynchronously
-    handleTextSelection(info.selectionText, tab.url || 'Unknown');
+    // Then process text asynchronously with autoPlay enabled
+    handleTextSelection(info.selectionText, tab.url || 'Unknown', true);
   } else if (info.menuItemId === 'speed-read-page') {
     // Open side panel immediately
     chrome.sidePanel.open({ windowId: tab.windowId });
     // Request full page text from content script
     chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_TEXT' }, (response) => {
       if (response?.text) {
-        handleTextSelection(response.text, tab.url || 'Unknown');
+        handleTextSelection(response.text, tab.url || 'Unknown', false);
       }
     });
   }
 });
 
 // Handle text selection and create document
-async function handleTextSelection(text: string, source: string) {
+async function handleTextSelection(text: string, source: string, autoPlay: boolean = false) {
   try {
     // Tokenize the text
     const tokens = tokenize(text);
@@ -73,9 +73,10 @@ async function handleTextSelection(text: string, source: string) {
 
     // Set pending document flag in chrome.storage.local
     // This notifies the sidepanel to load this document
-    await chrome.storage.local.set({ pendingDocument: docId });
+    // Include autoPlay flag to start playback immediately
+    await chrome.storage.local.set({ pendingDocument: docId, autoPlay });
 
-    console.log(`Created document ${docId} with ${tokens.length} tokens`);
+    console.log(`Created document ${docId} with ${tokens.length} tokens (autoPlay: ${autoPlay})`);
   } catch (error) {
     console.error('Failed to process text:', error);
   }
@@ -95,10 +96,10 @@ chrome.commands.onCommand.addListener(async (command) => {
     if (tab?.id && tab.windowId) {
       // Open side panel immediately (user gesture from keyboard shortcut)
       chrome.sidePanel.open({ windowId: tab.windowId });
-      // Then get selection and process
+      // Then get selection and process with autoPlay enabled
       chrome.tabs.sendMessage(tab.id, { type: 'GET_SELECTION' }, (response) => {
         if (response?.text) {
-          handleTextSelection(response.text, tab.url || 'Unknown');
+          handleTextSelection(response.text, tab.url || 'Unknown', true);
         }
       });
     }

@@ -52,6 +52,13 @@
   --color-input: #3d362c;
   --color-ring: #f0a623;
 
+  /* Radii */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
   /* Font families */
   --font-sans: 'Newsreader', Georgia, 'Times New Roman', serif;
   --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
