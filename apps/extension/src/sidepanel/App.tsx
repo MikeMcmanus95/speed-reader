@@ -2,15 +2,49 @@ import { useState, useEffect, useCallback } from 'react';
 import { HomeView } from './views/HomeView';
 import { ReaderView } from './views/ReaderView';
 import { LibraryView } from './views/LibraryView';
+import { AuthProvider, useAuth } from '../auth/AuthContext';
+import { initializeApiClient } from '../api/client';
+import { initializeSyncManager, getSyncManager } from '../sync/SyncManager';
 
 type View = 'home' | 'reader' | 'library';
 
-// Configuration for polling mechanism
-const POLL_INTERVAL_MS = 100;
-const MAX_POLL_DURATION_MS = 3000;
-const STALENESS_THRESHOLD_MS = 5000;
+// Initialize sync after auth is ready
+function SyncInitializer() {
+  const { getAccessToken, isAuthenticated, isLoading } = useAuth();
 
-export function App() {
+  useEffect(() => {
+    if (isLoading) return;
+
+    // Initialize API client with auth context's getAccessToken
+    const apiClient = initializeApiClient(getAccessToken);
+    initializeSyncManager(apiClient);
+
+    // If authenticated, trigger initial sync
+    if (isAuthenticated) {
+      getSyncManager().syncAll().catch(console.error);
+    }
+  }, [getAccessToken, isAuthenticated, isLoading]);
+
+  // Listen for auth completion message from login
+  useEffect(() => {
+    const listener = (message: { type: string }) => {
+      if (message.type === 'AUTH_COMPLETED') {
+        try {
+          getSyncManager().syncAll().catch(console.error);
+        } catch {
+          // SyncManager not initialized yet
+        }
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(listener);
+    return () => chrome.runtime.onMessage.removeListener(listener);
+  }, []);
+
+  return null;
+}
+
+function AppContent() {
   const [view, setView] = useState<View>('home');
   const [currentDocId, setCurrentDocId] = useState<string | null>(null);
   const [autoPlay, setAutoPlay] = useState(false);
@@ -21,94 +55,50 @@ export function App() {
   // 2. Storage listener isn't attached yet when document is created
   // 3. Multiple browser windows race to consume the pending document
   useEffect(() => {
-    let isMounted = true;
-    let isProcessing = false; // Prevent concurrent consumption attempts
-    let pollCount = 0;
-    const maxPolls = MAX_POLL_DURATION_MS / POLL_INTERVAL_MS;
-    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let cancelled = false;
 
-    const consumePendingDocument = async () => {
-      if (!isMounted || isProcessing) return;
-      isProcessing = true;
+    const handlePendingDocument = (pending: { docId: string; autoPlay: boolean }) => {
+      if (cancelled) return;
+      setCurrentDocId(pending.docId);
+      setAutoPlay(pending.autoPlay || false);
+      setView('reader');
+      chrome.storage.local.remove('pendingDocument');
+    };
 
-      try {
-        const result = await chrome.storage.local.get([
-          'pendingDocument',
-          'autoPlay',
-          'pendingDocumentTimestamp',
-        ]);
+    // Poll for pending document (handles race condition where document
+    // is created after sidepanel opens but before listener is ready)
+    const pollForPendingDocument = async () => {
+      const maxAttempts = 10;
+      const interval = 200; // ms
 
-        if (!result.pendingDocument) {
-          // No pending document, continue polling
-          isProcessing = false;
-          pollCount++;
-          if (pollCount >= maxPolls && intervalId) {
-            clearInterval(intervalId);
-          }
+      for (let i = 0; i < maxAttempts && !cancelled; i++) {
+        const result = await chrome.storage.local.get('pendingDocument');
+        if (result.pendingDocument) {
+          handlePendingDocument(result.pendingDocument);
           return;
         }
-
-        // Check staleness - ignore documents older than threshold
-        const timestamp = result.pendingDocumentTimestamp || 0;
-        const age = Date.now() - timestamp;
-
-        if (age > STALENESS_THRESHOLD_MS) {
-          console.log(`Ignoring stale pending document (age: ${age}ms)`);
-          await chrome.storage.local.remove([
-            'pendingDocument',
-            'autoPlay',
-            'pendingDocumentTimestamp',
-          ]);
-          isProcessing = false;
-          return;
+        if (i < maxAttempts - 1) {
+          await new Promise(resolve => setTimeout(resolve, interval));
         }
-
-        // Atomically consume: clear storage immediately to prevent other windows from consuming
-        await chrome.storage.local.remove([
-          'pendingDocument',
-          'autoPlay',
-          'pendingDocumentTimestamp',
-        ]);
-
-        // Stop polling - we found the document
-        if (intervalId) {
-          clearInterval(intervalId);
-        }
-
-        // Navigate to reader with the document
-        console.log(`Found pending document: ${result.pendingDocument} (autoPlay: ${result.autoPlay})`);
-        setCurrentDocId(result.pendingDocument);
-        setAutoPlay(result.autoPlay || false);
-        setView('reader');
-      } catch (error) {
-        console.error('Error polling for pending document:', error);
-        isProcessing = false;
       }
     };
 
-    // Initial check immediately on mount
-    consumePendingDocument();
+    pollForPendingDocument();
 
-    // Then poll at regular intervals
-    intervalId = setInterval(consumePendingDocument, POLL_INTERVAL_MS);
-
-    // Also listen for storage changes (handles documents created while sidepanel is open)
+    // Also listen for storage changes for documents created later
     const storageListener = (
       changes: { [key: string]: chrome.storage.StorageChange },
       namespace: string
     ) => {
       if (namespace !== 'local') return;
       if (changes.pendingDocument?.newValue) {
-        // Document was just created, poll will pick it up
-        consumePendingDocument();
+        handlePendingDocument(changes.pendingDocument.newValue);
       }
     };
 
     chrome.storage.onChanged.addListener(storageListener);
-
     return () => {
-      isMounted = false;
-      if (intervalId) clearInterval(intervalId);
+      cancelled = true;
       chrome.storage.onChanged.removeListener(storageListener);
     };
   }, []);
@@ -144,5 +134,14 @@ export function App() {
         />
       )}
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <SyncInitializer />
+      <AppContent />
+    </AuthProvider>
   );
 }

@@ -1,6 +1,8 @@
 package http
 
 import (
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -44,6 +46,12 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 	docHandlers := NewHandlers(deps.DocService, deps.SharingService, deps.Logger, deps.Sanitizer)
 	authHandlers := auth.NewHandlers(deps.AuthService, deps.FrontendURL, deps.SecureCookie)
 
+	// Health check endpoint (outside /api for simplicity)
+	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	})
+
 	// API routes
 	r.Route("/api", func(r chi.Router) {
 		// Auth routes (no auth required for most)
@@ -52,6 +60,11 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 			r.Get("/google", authHandlers.GoogleLogin)
 			r.Get("/google/callback", authHandlers.GoogleCallback)
 			r.Post("/refresh", authHandlers.Refresh)
+
+			// Extension-specific auth routes
+			r.Get("/extension/google", authHandlers.ExtensionGoogleLogin)
+			r.Get("/extension/google/callback", authHandlers.ExtensionGoogleCallback)
+			r.Post("/extension/refresh", authHandlers.ExtensionRefresh)
 
 			// These need optional auth to identify user
 			r.Group(func(r chi.Router) {

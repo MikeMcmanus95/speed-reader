@@ -6,7 +6,8 @@
   "permissions": [
     "sidePanel",
     "contextMenus",
-    "storage"
+    "storage",
+    "identity"
   ],
   "optional_permissions": [],
   "host_permissions": [

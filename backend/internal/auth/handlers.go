@@ -209,3 +209,87 @@ func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, user)
 }
+
+// ExtensionGoogleLogin handles GET /api/auth/extension/google
+// This initiates Google OAuth for Chrome extensions, redirecting back to an extension URL
+func (h *Handlers) ExtensionGoogleLogin(w http.ResponseWriter, r *http.Request) {
+	extensionID := r.URL.Query().Get("extension_id")
+	if extensionID == "" {
+		writeError(w, http.StatusBadRequest, "missing extension_id")
+		return
+	}
+
+	// Store extension_id in state along with optional guest_id
+	var guestID *uuid.UUID
+	if guestIDStr := r.URL.Query().Get("guest_id"); guestIDStr != "" {
+		if id, err := uuid.Parse(guestIDStr); err == nil {
+			guestID = &id
+		}
+	}
+
+	url := h.service.GetExtensionGoogleAuthURL(extensionID, guestID)
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+// ExtensionGoogleCallback handles GET /api/auth/extension/google/callback
+// This handles the Google OAuth callback for Chrome extensions
+func (h *Handlers) ExtensionGoogleCallback(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		writeError(w, http.StatusBadRequest, "missing code")
+		return
+	}
+
+	state := r.URL.Query().Get("state")
+
+	// Handle callback and extract extension ID from state
+	authResponse, refreshToken, extensionID, err := h.service.HandleExtensionGoogleCallback(r.Context(), code, state)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "auth failed: "+err.Error())
+		return
+	}
+
+	// Redirect to extension's auth callback page with tokens in URL fragment
+	// Format: chrome-extension://<extension_id>/auth-callback.html#access_token=xxx&refresh_token=yyy&expires_at=zzz
+	redirectURL := "https://" + extensionID + ".chromiumapp.org/oauth2callback" +
+		"#access_token=" + authResponse.Token +
+		"&refresh_token=" + refreshToken +
+		"&expires_at=" + authResponse.ExpiresAt.Format("2006-01-02T15:04:05Z07:00") +
+		"&user_id=" + authResponse.User.ID.String()
+
+	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+}
+
+// ExtensionRefresh handles POST /api/auth/extension/refresh
+// This handles token refresh for Chrome extensions using Authorization header instead of cookie
+func (h *Handlers) ExtensionRefresh(w http.ResponseWriter, r *http.Request) {
+	// Get refresh token from request body
+	var req struct {
+		RefreshToken string `json:"refreshToken"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.RefreshToken == "" {
+		writeError(w, http.StatusBadRequest, "missing refresh token in request body")
+		return
+	}
+
+	authResponse, newRefreshToken, err := h.service.RefreshAccessToken(r.Context(), req.RefreshToken)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "invalid or expired refresh token")
+		return
+	}
+
+	// Return tokens in response body (no cookies for extensions)
+	type ExtensionAuthResponse struct {
+		AccessToken  string `json:"accessToken"`
+		RefreshToken string `json:"refreshToken"`
+		ExpiresAt    string `json:"expiresAt"`
+		User         *User  `json:"user"`
+	}
+
+	writeJSON(w, http.StatusOK, ExtensionAuthResponse{
+		AccessToken:  authResponse.Token,
+		RefreshToken: newRefreshToken,
+		ExpiresAt:    authResponse.ExpiresAt.Format("2006-01-02T15:04:05Z07:00"),
+		User:         authResponse.User,
+	})
+}
