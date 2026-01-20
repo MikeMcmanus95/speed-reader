@@ -4,7 +4,7 @@ import {
   calculateElapsedTime,
   estimateTotalTime,
   formatDuration,
-} from '../utils/timer';
+} from '../lib/timer';
 
 interface UseReadingTimerProps {
   tokens: Token[];

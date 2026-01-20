@@ -15,3 +15,7 @@ export * from './components/ui/toggle-group';
 
 // Utilities
 export { cn } from './lib/utils';
+export * from './lib/timer';
+
+// Hooks
+export { useReadingTimer } from './hooks/useReadingTimer';
