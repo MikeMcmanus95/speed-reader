@@ -17,6 +17,10 @@ export function setBaseUrl(url: string) {
   baseUrl = url.endsWith('/') ? url.slice(0, -1) : url;
 }
 
+export function getBaseUrl(): string {
+  return baseUrl;
+}
+
 export function setAccessToken(token: string | null) {
   accessToken = token;
 }

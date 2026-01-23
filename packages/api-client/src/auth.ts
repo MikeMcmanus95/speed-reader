@@ -1,4 +1,5 @@
 import type { AuthResponse, User, ShareInfo, SharedDocument } from '@speed-reader/types';
+import { getBaseUrl } from './client';
 
 const API_BASE = '/api/auth';
 
@@ -55,7 +56,7 @@ export async function getCurrentUser(accessToken: string): Promise<User> {
 }
 
 export function getGoogleAuthUrl(guestId?: string): string {
-  const base = `${API_BASE}/google`;
+  const base = `${getBaseUrl()}${API_BASE}/google`;
   if (guestId) {
     // Validate UUID format before using
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
