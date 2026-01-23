@@ -8,8 +8,14 @@ export class ApiError extends Error {
   }
 }
 
+let baseUrl: string = '';
 let accessToken: string | null = null;
 let refreshTokenFn: (() => Promise<string | null>) | null = null;
+
+export function setBaseUrl(url: string) {
+  // Remove trailing slash if present
+  baseUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+}
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
@@ -62,7 +68,7 @@ async function handleResponse<T>(response: Response, retryFn?: () => Promise<T>)
 
 export async function get<T>(url: string): Promise<T> {
   const makeRequest = async (): Promise<T> => {
-    const response = await fetch(url, {
+    const response = await fetch(`${baseUrl}${url}`, {
       method: 'GET',
       headers: await getAuthHeaders(),
       credentials: 'include',
@@ -74,7 +80,7 @@ export async function get<T>(url: string): Promise<T> {
 
 export async function post<T, B>(url: string, body: B): Promise<T> {
   const makeRequest = async (): Promise<T> => {
-    const response = await fetch(url, {
+    const response = await fetch(`${baseUrl}${url}`, {
       method: 'POST',
       headers: await getAuthHeaders(true),
       credentials: 'include',
@@ -87,7 +93,7 @@ export async function post<T, B>(url: string, body: B): Promise<T> {
 
 export async function put<T, B>(url: string, body: B): Promise<T> {
   const makeRequest = async (): Promise<T> => {
-    const response = await fetch(url, {
+    const response = await fetch(`${baseUrl}${url}`, {
       method: 'PUT',
       headers: await getAuthHeaders(true),
       credentials: 'include',
@@ -100,7 +106,7 @@ export async function put<T, B>(url: string, body: B): Promise<T> {
 
 export async function del(url: string): Promise<void> {
   const makeRequest = async (): Promise<void> => {
-    const response = await fetch(url, {
+    const response = await fetch(`${baseUrl}${url}`, {
       method: 'DELETE',
       headers: await getAuthHeaders(true),
       credentials: 'include',

@@ -1,7 +1,7 @@
 import { createExtensionAdapter } from '@speed-reader/api-client';
 import { db, type LocalDocument } from './db';
 
-const BACKEND_URL = 'https://your-backend.com/api'; // Configure via settings
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
 export interface SyncStatus {
   isOnline: boolean;

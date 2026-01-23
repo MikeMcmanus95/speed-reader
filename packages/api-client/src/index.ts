@@ -1,4 +1,4 @@
-export { ApiError, get, post, put, del, setAccessToken, setRefreshTokenFn } from './client';
+export { ApiError, get, post, put, del, setAccessToken, setRefreshTokenFn, setBaseUrl } from './client';
 export * from './documents';
 export * from './auth';
 export { createWebAdapter } from './adapters/web';

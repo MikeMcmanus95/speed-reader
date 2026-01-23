@@ -95,19 +95,17 @@ export const ProgressBar = React.memo(function ProgressBar({ current, total, onS
         onMouseDown={handleMouseDown}
       >
         <div
-          className={`h-full bg-amber-500 rounded-full group-hover:bg-amber-400 ${
-            !isDragging && "transition-[width] duration-100 ease-out"
-          }`}
+          className={`h-full bg-amber-500 rounded-full group-hover:bg-amber-400 ${!isDragging && "transition-[width] duration-100 ease-out"
+            }`}
           style={{ width: `${progress}%` }}
         />
         <div
-          className={`absolute top-1/2 w-4 h-4 bg-amber-400 border-2 border-bg-deep rounded-full -translate-x-1/2 -translate-y-1/2 shadow-[0_0_8px_rgba(240,166,35,0.4)] pointer-events-none group-hover:shadow-[0_0_12px_rgba(240,166,35,0.6)] group-hover:scale-110 ${
-            !isDragging && "transition-all"
-          }`}
+          className={`absolute top-1/2 w-4 h-4 bg-amber-400 border-2 border-bg-deep rounded-full -translate-x-1/2 -translate-y-1/2 shadow-[0_0_8px_rgba(240,166,35,0.4)] pointer-events-none group-hover:shadow-[0_0_12px_rgba(240,166,35,0.6)] group-hover:scale-110 ${!isDragging && "transition-all"
+            }`}
           style={{ left: `${progress}%` }}
         />
       </div>
-      <div className="mt-2 flex items-center justify-between text-sm font-counter text-text-tertiary px-1">
+      <div className="mt-2 flex items-center justify-between text-sm font-counter text-text-tertiary px-1 select-none">
         <TimerDisplay elapsed={elapsedTime || '0:00'} total={totalTime || '0:00'} />
         <div className="tabular-nums">{formatProgress()}</div>
       </div>
