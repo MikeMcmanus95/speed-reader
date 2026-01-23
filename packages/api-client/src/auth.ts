@@ -4,7 +4,7 @@ import { getBaseUrl } from './client';
 const API_BASE = '/api/auth';
 
 export async function createGuestUser(): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE}/guest`, {
+  const response = await fetch(`${getBaseUrl()}${API_BASE}/guest`, {
     method: 'POST',
     credentials: 'include',
   });
@@ -18,7 +18,7 @@ export async function createGuestUser(): Promise<AuthResponse> {
 }
 
 export async function refreshToken(): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE}/refresh`, {
+  const response = await fetch(`${getBaseUrl()}${API_BASE}/refresh`, {
     method: 'POST',
     credentials: 'include',
   });
@@ -32,14 +32,14 @@ export async function refreshToken(): Promise<AuthResponse> {
 }
 
 export async function logout(): Promise<void> {
-  await fetch(`${API_BASE}/logout`, {
+  await fetch(`${getBaseUrl()}${API_BASE}/logout`, {
     method: 'POST',
     credentials: 'include',
   });
 }
 
 export async function getCurrentUser(accessToken: string): Promise<User> {
-  const response = await fetch(`${API_BASE}/me`, {
+  const response = await fetch(`${getBaseUrl()}${API_BASE}/me`, {
     method: 'GET',
     credentials: 'include',
     headers: {
@@ -76,7 +76,7 @@ export async function getShareInfo(
   docId: string,
   accessToken: string
 ): Promise<ShareInfo> {
-  const response = await fetch(`${SHARE_BASE}/${docId}/share`, {
+  const response = await fetch(`${getBaseUrl()}${SHARE_BASE}/${docId}/share`, {
     method: 'GET',
     credentials: 'include',
     headers: {
@@ -97,7 +97,7 @@ export async function generateShareToken(
   docId: string,
   accessToken: string
 ): Promise<ShareInfo> {
-  const response = await fetch(`${SHARE_BASE}/${docId}/share`, {
+  const response = await fetch(`${getBaseUrl()}${SHARE_BASE}/${docId}/share`, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -118,7 +118,7 @@ export async function revokeShareToken(
   docId: string,
   accessToken: string
 ): Promise<void> {
-  const response = await fetch(`${SHARE_BASE}/${docId}/share`, {
+  const response = await fetch(`${getBaseUrl()}${SHARE_BASE}/${docId}/share`, {
     method: 'DELETE',
     credentials: 'include',
     headers: {
@@ -137,7 +137,7 @@ export async function setVisibility(
   visibility: 'private' | 'public',
   accessToken: string
 ): Promise<ShareInfo> {
-  const response = await fetch(`${SHARE_BASE}/${docId}/visibility`, {
+  const response = await fetch(`${getBaseUrl()}${SHARE_BASE}/${docId}/visibility`, {
     method: 'PUT',
     credentials: 'include',
     headers: {
@@ -159,7 +159,7 @@ export async function setVisibility(
 const SHARED_BASE = '/api/shared';
 
 export async function getSharedDocument(shareToken: string): Promise<SharedDocument> {
-  const response = await fetch(`${SHARED_BASE}/${shareToken}`, {
+  const response = await fetch(`${getBaseUrl()}${SHARED_BASE}/${shareToken}`, {
     method: 'GET',
   });
 
