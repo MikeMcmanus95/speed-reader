@@ -2,9 +2,9 @@
 FROM golang:1.20-alpine AS builder
 WORKDIR /build
 RUN apk add --no-cache git ca-certificates
-COPY ../backend/go.mod ../backend/go.sum ./
+COPY go.mod go.sum ./
 RUN go mod download
-COPY ../backend/ .
+COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o api ./cmd/api
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o cleanup ./cmd/cleanup
 
