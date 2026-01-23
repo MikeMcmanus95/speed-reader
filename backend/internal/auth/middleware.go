@@ -105,11 +105,24 @@ func OptionalAuth(service *Service) func(http.Handler) http.Handler {
 }
 
 // ValidateCSRF middleware validates the CSRF token for state-changing requests
+// Note: Requests using Bearer token authentication are exempt from CSRF validation
+// because CSRF attacks rely on cookies being automatically sent by browsers.
+// Bearer tokens must be explicitly added by the application, so they're not
+// vulnerable to CSRF attacks.
 func ValidateCSRF(service *Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Only validate for state-changing methods
 			if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// Skip CSRF validation for Bearer token authentication (used by extensions)
+			// Bearer tokens are not automatically sent by browsers, so they're inherently
+			// protected from CSRF attacks
+			authHeader := r.Header.Get("Authorization")
+			if strings.HasPrefix(authHeader, "Bearer ") {
 				next.ServeHTTP(w, r)
 				return
 			}

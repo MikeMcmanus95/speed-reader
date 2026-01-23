@@ -16,6 +16,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/mikepersonal/speed-reader/backend/internal/auth"
 	"github.com/mikepersonal/speed-reader/backend/internal/config"
+	"github.com/mikepersonal/speed-reader/backend/internal/database"
 	"github.com/mikepersonal/speed-reader/backend/internal/documents"
 	httpHandler "github.com/mikepersonal/speed-reader/backend/internal/http"
 	"github.com/mikepersonal/speed-reader/backend/internal/logging"
@@ -97,6 +98,14 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Info("connected to database")
+
+	// Run database migrations
+	logger.Info("running database migrations...")
+	if err := database.RunMigrations(db); err != nil {
+		logger.Error("failed to run migrations", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	logger.Info("database migrations complete")
 
 	// Create storage directory if it doesn't exist
 	if err := os.MkdirAll(cfg.StoragePath, 0755); err != nil {
