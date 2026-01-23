@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	_ "github.com/lib/pq"
 	"golang.org/x/exp/slog"
@@ -65,17 +66,34 @@ func main() {
 		slog.String("environment", cfg.Environment),
 	)
 
-	// Connect to database
+	// Connect to database with retry logic
 	db, err := sql.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
-		logger.Error("failed to connect to database", slog.String("error", err.Error()))
+		logger.Error("failed to open database", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 	defer db.Close()
 
-	// Verify database connection
-	if err := db.Ping(); err != nil {
-		logger.Error("failed to ping database", slog.String("error", err.Error()))
+	// Verify database connection with retries
+	maxRetries := 30
+	retryInterval := 2 * time.Second
+	var lastErr error
+	for i := 0; i < maxRetries; i++ {
+		if err := db.Ping(); err != nil {
+			lastErr = err
+			logger.Warn("failed to ping database, retrying...",
+				slog.String("error", err.Error()),
+				slog.Int("attempt", i+1),
+				slog.Int("max_attempts", maxRetries),
+			)
+			time.Sleep(retryInterval)
+			continue
+		}
+		lastErr = nil
+		break
+	}
+	if lastErr != nil {
+		logger.Error("failed to connect to database after retries", slog.String("error", lastErr.Error()))
 		os.Exit(1)
 	}
 	logger.Info("connected to database")
