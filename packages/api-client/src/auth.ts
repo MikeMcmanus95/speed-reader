@@ -3,20 +3,6 @@ import { getBaseUrl } from './client';
 
 const API_BASE = '/api/auth';
 
-export async function createGuestUser(): Promise<AuthResponse> {
-  const response = await fetch(`${getBaseUrl()}${API_BASE}/guest`, {
-    method: 'POST',
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to create guest user' }));
-    throw new Error(error.error);
-  }
-
-  return response.json();
-}
-
 export async function refreshToken(): Promise<AuthResponse> {
   const response = await fetch(`${getBaseUrl()}${API_BASE}/refresh`, {
     method: 'POST',
@@ -55,18 +41,8 @@ export async function getCurrentUser(accessToken: string): Promise<User> {
   return response.json();
 }
 
-export function getGoogleAuthUrl(guestId?: string): string {
-  const base = `${getBaseUrl()}${API_BASE}/google`;
-  if (guestId) {
-    // Validate UUID format before using
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(guestId)) {
-      console.error('Invalid guestId format');
-      return base;
-    }
-    return `${base}?guest_id=${encodeURIComponent(guestId)}`;
-  }
-  return base;
+export function getGoogleAuthUrl(): string {
+  return `${getBaseUrl()}${API_BASE}/google`;
 }
 
 // Sharing API

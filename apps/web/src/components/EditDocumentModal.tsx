@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, FileText, AlertCircle, Save, Loader2 } from 'lucide-react';
 import { Button, Input, Textarea } from '@speed-reader/ui';
-import { getDocumentContent, updateDocument } from '@speed-reader/api-client';
 import type { DocumentWithProgress } from '@speed-reader/types';
+import { useDocumentStorage } from '../storage';
 
 interface EditDocumentModalProps {
   isOpen: boolean;
@@ -13,6 +13,9 @@ interface EditDocumentModalProps {
 }
 
 export function EditDocumentModal({ isOpen, onClose, document, onUpdate }: EditDocumentModalProps) {
+  const storage = useDocumentStorage();
+  const storageRef = useRef(storage);
+  storageRef.current = storage;
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [originalContent, setOriginalContent] = useState('');
@@ -28,7 +31,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onUpdate }: EditD
     try {
       setIsLoading(true);
       setError(null);
-      const response = await getDocumentContent(document.id);
+      const response = await storageRef.current.getDocumentContent(document.id);
       setContent(response.content);
       setOriginalContent(response.content);
       setHasContent(response.hasContent);
@@ -80,10 +83,11 @@ export function EditDocumentModal({ isOpen, onClose, document, onUpdate }: EditD
         return;
       }
 
-      const updatedDoc = await updateDocument(document.id, {
-        title: title.trim(),
-        ...(contentChanged ? { content } : {}),
-      });
+      const updatedDoc = await storageRef.current.updateDocument(
+        document.id,
+        title.trim(),
+        contentChanged ? content : undefined
+      );
 
       // Merge updated doc with progress info
       onUpdate({

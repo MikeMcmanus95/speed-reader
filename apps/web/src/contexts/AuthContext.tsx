@@ -4,23 +4,25 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from 'react';
 import type { User } from '@speed-reader/types';
 import {
-  createGuestUser,
   refreshToken as refreshTokenApi,
   logout as logoutApi,
   getGoogleAuthUrl,
   setAccessToken,
   setRefreshTokenFn,
 } from '@speed-reader/api-client';
+import { MigrationService } from '../storage/MigrationService';
 
 interface AuthState {
   user: User | null;
   accessToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isMigrating: boolean;
 }
 
 interface AuthContextValue extends AuthState {
@@ -42,9 +44,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     accessToken: null,
     isLoading: true,
     isAuthenticated: false,
+    isMigrating: false,
   });
 
   const [tokenExpiresAt, setTokenExpiresAt] = useState<Date | null>(null);
+  const migrationServiceRef = useRef<MigrationService | null>(null);
+
+  // Get or create migration service
+  const getMigrationService = useCallback(() => {
+    if (!migrationServiceRef.current) {
+      migrationServiceRef.current = new MigrationService();
+    }
+    return migrationServiceRef.current;
+  }, []);
 
   // Sync access token with API client
   useEffect(() => {
@@ -56,12 +68,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setRefreshTokenFn(async () => {
       try {
         const response = await refreshTokenApi();
-        setState({
+        setState(prev => ({
+          ...prev,
           user: response.user,
           accessToken: response.accessToken,
           isLoading: false,
           isAuthenticated: true,
-        });
+        }));
         setTokenExpiresAt(new Date(response.expiresAt));
         return response.accessToken;
       } catch {
@@ -81,9 +94,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Handle OAuth callback
       handleOAuthCallback(token);
     } else {
-      // Normal initialization - try to refresh or create guest
+      // Normal initialization - try to refresh existing session
       initializeAuth();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const initializeAuth = async () => {
@@ -95,28 +109,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         accessToken: response.accessToken,
         isLoading: false,
         isAuthenticated: true,
+        isMigrating: false,
       });
       setTokenExpiresAt(new Date(response.expiresAt));
     } catch {
-      // No valid session, create guest user
-      try {
-        const response = await createGuestUser();
-        setState({
-          user: response.user,
-          accessToken: response.accessToken,
-          isLoading: false,
-          isAuthenticated: true,
-        });
-        setTokenExpiresAt(new Date(response.expiresAt));
-      } catch (guestError) {
-        console.error('Failed to create guest user:', guestError);
-        setState({
-          user: null,
-          accessToken: null,
-          isLoading: false,
-          isAuthenticated: false,
-        });
-      }
+      // No valid session - user is unauthenticated
+      // Documents will be stored locally in IndexedDB
+      setState({
+        user: null,
+        accessToken: null,
+        isLoading: false,
+        isAuthenticated: false,
+        isMigrating: false,
+      });
     }
   };
 
@@ -125,51 +130,71 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       const response = await refreshTokenApi();
-      setState({
-        user: response.user,
-        accessToken: response.accessToken,
-        isLoading: false,
-        isAuthenticated: true,
-      });
-      setTokenExpiresAt(new Date(response.expiresAt));
+
+      // Check if there are local documents to migrate
+      const migrationService = getMigrationService();
+      const hasLocalDocs = await migrationService.hasLocalDocuments();
+
+      if (hasLocalDocs) {
+        setState(prev => ({
+          ...prev,
+          user: response.user,
+          accessToken: response.accessToken,
+          isLoading: false,
+          isAuthenticated: true,
+          isMigrating: true,
+        }));
+        setTokenExpiresAt(new Date(response.expiresAt));
+
+        // Migrate local documents to the user's account
+        try {
+          const result = await migrationService.migrateLocalDocuments(response.user.id);
+          if (result.failedDocuments.length > 0) {
+            console.warn('Some documents failed to migrate:', result.failedDocuments);
+          }
+        } catch (err) {
+          console.error('Migration failed:', err);
+        }
+
+        setState(prev => ({ ...prev, isMigrating: false }));
+      } else {
+        setState({
+          user: response.user,
+          accessToken: response.accessToken,
+          isLoading: false,
+          isAuthenticated: true,
+          isMigrating: false,
+        });
+        setTokenExpiresAt(new Date(response.expiresAt));
+      }
     } catch (error) {
       console.error('OAuth callback failed:', error);
-      setState(prev => ({ ...prev, isLoading: false }));
+      setState(prev => ({ ...prev, isLoading: false, isMigrating: false }));
     }
   };
 
   const refreshAuth = useCallback(async (): Promise<boolean> => {
     try {
       const response = await refreshTokenApi();
-      setState({
+      setState(prev => ({
+        ...prev,
         user: response.user,
         accessToken: response.accessToken,
         isLoading: false,
         isAuthenticated: true,
-      });
+      }));
       setTokenExpiresAt(new Date(response.expiresAt));
       return true;
     } catch {
-      // If refresh fails, create a new guest user
-      try {
-        const response = await createGuestUser();
-        setState({
-          user: response.user,
-          accessToken: response.accessToken,
-          isLoading: false,
-          isAuthenticated: true,
-        });
-        setTokenExpiresAt(new Date(response.expiresAt));
-        return true;
-      } catch {
-        setState({
-          user: null,
-          accessToken: null,
-          isLoading: false,
-          isAuthenticated: false,
-        });
-        return false;
-      }
+      // If refresh fails, user becomes unauthenticated
+      setState(prev => ({
+        ...prev,
+        user: null,
+        accessToken: null,
+        isLoading: false,
+        isAuthenticated: false,
+      }));
+      return false;
     }
   }, []);
 
@@ -188,10 +213,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [state.accessToken, tokenExpiresAt, refreshAuth]);
 
   const login = useCallback(() => {
-    // Pass guest user ID so documents can be migrated on sign up
-    const guestId = state.user?.isGuest ? state.user.id : undefined;
-    window.location.href = getGoogleAuthUrl(guestId);
-  }, [state.user]);
+    // No guest ID needed - we migrate local documents after OAuth callback
+    window.location.href = getGoogleAuthUrl();
+  }, []);
 
   const logout = useCallback(async () => {
     try {
@@ -199,24 +223,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('Logout error:', error);
     }
-    // Create a new guest user after logout
-    try {
-      const response = await createGuestUser();
-      setState({
-        user: response.user,
-        accessToken: response.accessToken,
-        isLoading: false,
-        isAuthenticated: true,
-      });
-      setTokenExpiresAt(new Date(response.expiresAt));
-    } catch {
-      setState({
-        user: null,
-        accessToken: null,
-        isLoading: false,
-        isAuthenticated: false,
-      });
-    }
+    // After logout, user becomes unauthenticated
+    // Documents will be stored locally in IndexedDB
+    setState({
+      user: null,
+      accessToken: null,
+      isLoading: false,
+      isAuthenticated: false,
+      isMigrating: false,
+    });
   }, []);
 
   const value: AuthContextValue = {

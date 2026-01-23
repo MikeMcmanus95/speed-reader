@@ -1,16 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Plus, Library, FileText } from 'lucide-react';
 import { Button } from '@speed-reader/ui';
-import { listDocuments, deleteDocument } from '@speed-reader/api-client';
 import type { DocumentWithProgress } from '@speed-reader/types';
 import { DocumentCard } from '../components/DocumentCard';
 import { EditDocumentModal } from '../components/EditDocumentModal';
 import { UserMenu } from '../components/UserMenu';
+import { useDocumentStorage } from '../storage';
 
 function LibraryView() {
   const navigate = useNavigate();
+  const storage = useDocumentStorage();
+  const storageRef = useRef(storage);
+  storageRef.current = storage;
   const [documents, setDocuments] = useState<DocumentWithProgress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +21,7 @@ function LibraryView() {
 
   const fetchDocuments = useCallback(async () => {
     try {
-      const docs = await listDocuments();
+      const docs = await storageRef.current.listDocuments();
       setDocuments(docs || []);
       setError(null);
     } catch (err) {
@@ -43,7 +46,7 @@ function LibraryView() {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteDocument(id);
+    await storageRef.current.deleteDocument(id);
     setDocuments((prev) => prev.filter((doc) => doc.id !== id));
   };
 

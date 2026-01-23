@@ -28,54 +28,14 @@ func NewService(repo *Repository, jwtManager *JWTManager, csrfManager *CSRFManag
 	}
 }
 
-// CreateGuestUser creates a new guest user and returns auth tokens
-func (s *Service) CreateGuestUser(ctx context.Context) (*AuthResponse, string, error) {
-	// Generate a guest name
-	guestName := generateGuestName()
-
-	user, err := s.repo.CreateGuestUser(ctx, &CreateGuestUserParams{
-		Name: guestName,
-	})
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to create guest user: %w", err)
-	}
-
-	// Generate tokens
-	accessToken, expiresAt, err := s.jwtManager.GenerateAccessToken(user)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to generate access token: %w", err)
-	}
-
-	refreshToken, err := GenerateRefreshToken()
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to generate refresh token: %w", err)
-	}
-
-	// Store refresh token
-	refreshExpiresAt := time.Now().Add(RefreshTokenDuration)
-	if err := s.repo.StoreRefreshToken(ctx, refreshToken, user.ID, refreshExpiresAt); err != nil {
-		return nil, "", fmt.Errorf("failed to store refresh token: %w", err)
-	}
-
-	return &AuthResponse{
-		User:      user,
-		Token:     accessToken,
-		ExpiresAt: expiresAt,
-	}, refreshToken, nil
-}
-
 // GetGoogleAuthURL returns the Google OAuth URL
-func (s *Service) GetGoogleAuthURL(guestUserID *uuid.UUID) string {
-	// Encode guest user ID in state for merge after OAuth
+func (s *Service) GetGoogleAuthURL() string {
 	state := generateState()
-	if guestUserID != nil {
-		state = guestUserID.String() + ":" + state
-	}
 	return s.googleOAuth.GetAuthURL(state)
 }
 
 // HandleGoogleCallback processes the Google OAuth callback
-func (s *Service) HandleGoogleCallback(ctx context.Context, code string, state string) (*AuthResponse, string, error) {
+func (s *Service) HandleGoogleCallback(ctx context.Context, code string) (*AuthResponse, string, error) {
 	// Exchange code for tokens
 	oauthToken, err := s.googleOAuth.ExchangeCode(ctx, code)
 	if err != nil {
@@ -86,14 +46,6 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code string, state s
 	googleUser, err := s.googleOAuth.GetUserInfo(ctx, oauthToken)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get user info: %w", err)
-	}
-
-	// Parse guest user ID from state (if present)
-	var guestUserID *uuid.UUID
-	if len(state) > 37 && state[36] == ':' {
-		if id, err := uuid.Parse(state[:36]); err == nil {
-			guestUserID = &id
-		}
 	}
 
 	var user *User
@@ -107,16 +59,6 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code string, state s
 	if existingUser != nil {
 		// User exists, update info if needed
 		user = existingUser
-	} else if guestUserID != nil {
-		// Merge guest user to OAuth user
-		user, err = s.repo.MergeGuestToOAuth(ctx, *guestUserID, googleUser.ToCreateOAuthUserParams())
-		if err != nil {
-			// If merge fails (guest doesn't exist), create new user
-			user, err = s.repo.CreateOrUpdateOAuthUser(ctx, googleUser.ToCreateOAuthUserParams())
-			if err != nil {
-				return nil, "", fmt.Errorf("failed to create OAuth user: %w", err)
-			}
-		}
 	} else {
 		// Create new OAuth user
 		user, err = s.repo.CreateOrUpdateOAuthUser(ctx, googleUser.ToCreateOAuthUserParams())
@@ -140,12 +82,6 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code string, state s
 	refreshExpiresAt := time.Now().Add(RefreshTokenDuration)
 	if err := s.repo.StoreRefreshToken(ctx, refreshToken, user.ID, refreshExpiresAt); err != nil {
 		return nil, "", fmt.Errorf("failed to store refresh token: %w", err)
-	}
-
-	// If there was a guest user and we merged or created a different user,
-	// delete the old guest user's refresh tokens
-	if guestUserID != nil && user.ID != *guestUserID {
-		_ = s.repo.DeleteUserRefreshTokens(ctx, *guestUserID)
 	}
 
 	return &AuthResponse{
@@ -225,13 +161,6 @@ func (s *Service) ValidateCSRFToken(token string) bool {
 	return s.csrfManager.ValidateToken(token)
 }
 
-// generateGuestName generates a random guest name
-func generateGuestName() string {
-	bytes := make([]byte, 4)
-	rand.Read(bytes)
-	return fmt.Sprintf("Guest-%s", base64.URLEncoding.EncodeToString(bytes)[:6])
-}
-
 // generateState generates a random state string for OAuth
 func generateState() string {
 	bytes := make([]byte, 16)
@@ -240,22 +169,18 @@ func generateState() string {
 }
 
 // GetExtensionGoogleAuthURL returns the Google OAuth URL for Chrome extensions
-func (s *Service) GetExtensionGoogleAuthURL(extensionID string, guestUserID *uuid.UUID) string {
-	// Encode extension ID and optional guest user ID in state
-	// Format: ext:<extension_id>[:<guest_id>]:<random_state>
-	state := "ext:" + extensionID
-	if guestUserID != nil {
-		state += ":" + guestUserID.String()
-	}
-	state += ":" + generateState()
+func (s *Service) GetExtensionGoogleAuthURL(extensionID string) string {
+	// Encode extension ID in state
+	// Format: ext:<extension_id>:<random_state>
+	state := "ext:" + extensionID + ":" + generateState()
 	return s.googleOAuth.GetExtensionAuthURL(state)
 }
 
 // HandleExtensionGoogleCallback processes the Google OAuth callback for Chrome extensions
 // Returns auth response, refresh token, extension ID, and any error
 func (s *Service) HandleExtensionGoogleCallback(ctx context.Context, code string, state string) (*AuthResponse, string, string, error) {
-	// Parse state to extract extension ID and optional guest user ID
-	// Format: ext:<extension_id>[:<guest_id>]:<random_state>
+	// Parse state to extract extension ID
+	// Format: ext:<extension_id>:<random_state>
 	if len(state) < 4 || state[:4] != "ext:" {
 		return nil, "", "", fmt.Errorf("invalid state format")
 	}
@@ -266,14 +191,6 @@ func (s *Service) HandleExtensionGoogleCallback(ctx context.Context, code string
 	}
 
 	extensionID := parts[0]
-	var guestUserID *uuid.UUID
-
-	// Check if there's a guest user ID (parts will be: ext_id, guest_id, random OR ext_id, random)
-	if len(parts) >= 3 {
-		if id, err := uuid.Parse(parts[1]); err == nil {
-			guestUserID = &id
-		}
-	}
 
 	// Exchange code for tokens using extension-specific redirect URL
 	oauthToken, err := s.googleOAuth.ExchangeCodeForExtension(ctx, code)
@@ -298,16 +215,6 @@ func (s *Service) HandleExtensionGoogleCallback(ctx context.Context, code string
 	if existingUser != nil {
 		// User exists, update info if needed
 		user = existingUser
-	} else if guestUserID != nil {
-		// Merge guest user to OAuth user
-		user, err = s.repo.MergeGuestToOAuth(ctx, *guestUserID, googleUser.ToCreateOAuthUserParams())
-		if err != nil {
-			// If merge fails (guest doesn't exist), create new user
-			user, err = s.repo.CreateOrUpdateOAuthUser(ctx, googleUser.ToCreateOAuthUserParams())
-			if err != nil {
-				return nil, "", "", fmt.Errorf("failed to create OAuth user: %w", err)
-			}
-		}
 	} else {
 		// Create new OAuth user
 		user, err = s.repo.CreateOrUpdateOAuthUser(ctx, googleUser.ToCreateOAuthUserParams())
@@ -333,12 +240,6 @@ func (s *Service) HandleExtensionGoogleCallback(ctx context.Context, code string
 		return nil, "", "", fmt.Errorf("failed to store refresh token: %w", err)
 	}
 
-	// If there was a guest user and we merged or created a different user,
-	// delete the old guest user's refresh tokens
-	if guestUserID != nil && user.ID != *guestUserID {
-		_ = s.repo.DeleteUserRefreshTokens(ctx, *guestUserID)
-	}
-
 	return &AuthResponse{
 		User:      user,
 		Token:     accessToken,
@@ -362,12 +263,4 @@ func splitState(state string) []string {
 		parts = append(parts, current)
 	}
 	return parts
-}
-
-// rebuildState reconstructs the state format expected by HandleGoogleCallback
-func rebuildState(guestUserID *uuid.UUID, randomState string) string {
-	if guestUserID != nil {
-		return guestUserID.String() + ":" + randomState
-	}
-	return randomState
 }

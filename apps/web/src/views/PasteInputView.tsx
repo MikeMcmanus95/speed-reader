@@ -2,25 +2,23 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Library } from 'lucide-react';
-import { createDocument } from '@speed-reader/api-client';
 import { Button, Input, Textarea, Card, CardHeader, CardTitle, CardDescription, CardContent, cn } from '@speed-reader/ui';
 import { UserMenu } from '../components/UserMenu';
-import { useUser } from '../hooks/useAuth';
+import { useDocumentStorage } from '../storage';
 
-const GUEST_MAX_SIZE = 1024 * 1024; // 1MB
-const AUTH_MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB for all users
 
 export function PasteInputView() {
   const navigate = useNavigate();
-  const user = useUser();
+  const storage = useDocumentStorage();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Authenticated (non-guest) users get a higher limit
-  const maxSize = user && !user.isGuest ? AUTH_MAX_SIZE : GUEST_MAX_SIZE;
-  const maxSizeDisplay = user && !user.isGuest ? '10 MB' : '1 MB';
+  // Same limit for all users (10MB)
+  const maxSize = MAX_SIZE;
+  const maxSizeDisplay = '10 MB';
 
   const contentSize = new Blob([content]).size;
   const isOverLimit = contentSize > maxSize;
@@ -36,16 +34,13 @@ export function PasteInputView() {
     setError(null);
 
     try {
-      const doc = await createDocument({
-        title: title.trim(), // Server generates random name if empty
-        content,
-      });
+      const doc = await storage.createDocument(content, title.trim() || undefined);
       navigate(`/read/${doc.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create document');
       setIsSubmitting(false);
     }
-  }, [title, content, isOverLimit, isSubmitting, navigate]);
+  }, [title, content, isOverLimit, isSubmitting, navigate, storage]);
 
   return (
     <div className="min-h-screen bg-warm-gradient bg-grain flex flex-col">

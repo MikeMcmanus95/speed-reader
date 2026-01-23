@@ -3,10 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Share2 } from 'lucide-react';
 import { RSVPDisplay, ControlBar, ProgressBar, Button, useReadingTimer } from '@speed-reader/ui';
 import { RSVPEngine, type RSVPConfig } from '@speed-reader/engine';
-import { getDocument, getTokens, getReadingState, updateReadingState } from '@speed-reader/api-client';
 import type { Document, Token } from '@speed-reader/types';
 import { UserMenu } from '../components/UserMenu';
 import { ShareModal } from '../components/ShareModal';
+import { useDocumentStorage, useIsLocalStorage } from '../storage';
 
 const TOKENS_PER_CHUNK = 5000;
 const SAVE_INTERVAL = 5000; // 5 seconds
@@ -14,6 +14,10 @@ const SAVE_INTERVAL = 5000; // 5 seconds
 function ReaderView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const storage = useDocumentStorage();
+  const isLocalStorage = useIsLocalStorage();
+  const storageRef = useRef(storage);
+  storageRef.current = storage;
 
   const [document, setDocument] = useState<Document | null>(null);
   const [currentTokens, setCurrentTokens] = useState<Token[]>([]);
@@ -63,7 +67,7 @@ function ReaderView() {
     if (loadedChunksRef.current.has(chunkIndex)) return;
 
     try {
-      const chunk = await getTokens(docId, chunkIndex);
+      const chunk = await storageRef.current.getTokens(docId, chunkIndex);
       loadedChunksRef.current.add(chunkIndex);
 
       if (engineRef.current && document) {
@@ -93,9 +97,9 @@ function ReaderView() {
         setError(null);
 
         const [doc, state, chunk] = await Promise.all([
-          getDocument(id!),
-          getReadingState(id!),
-          getTokens(id!, 0),
+          storageRef.current.getDocument(id!),
+          storageRef.current.getReadingState(id!),
+          storageRef.current.getTokens(id!, 0),
         ]);
 
         setDocument(doc);
@@ -109,7 +113,7 @@ function ReaderView() {
           // Load chunk containing saved position if needed
           const savedChunk = Math.floor(state.tokenIndex / TOKENS_PER_CHUNK);
           if (savedChunk > 0 && !loadedChunksRef.current.has(savedChunk)) {
-            const savedChunkData = await getTokens(id!, savedChunk);
+            const savedChunkData = await storageRef.current.getTokens(id!, savedChunk);
             loadedChunksRef.current.add(savedChunk);
             engineRef.current.setTokens(
               savedChunkData.tokens,
@@ -140,7 +144,7 @@ function ReaderView() {
       // Don't save if we haven't loaded the reading state yet
       // This prevents overwriting saved progress with position 0 if user navigates away before load completes
       if (!id || !hasLoadedReadingStateRef.current) return;
-      updateReadingState(id, {
+      storageRef.current.updateReadingState(id, {
         tokenIndex: positionRef.current,
         wpm: configRef.current.wpm,
         chunkSize: configRef.current.chunkSize,
@@ -251,15 +255,17 @@ function ReaderView() {
         <h1 className="flex-1 text-lg md:text-xl font-semibold text-text-primary truncate">
           {document?.title}
         </h1>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsShareModalOpen(true)}
-          className="gap-2 text-text-secondary hover:text-amber-400 hover:bg-bg-surface"
-        >
-          <Share2 className="w-4 h-4" />
-          <span className="hidden sm:inline">Share</span>
-        </Button>
+        {!isLocalStorage && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsShareModalOpen(true)}
+            className="gap-2 text-text-secondary hover:text-amber-400 hover:bg-bg-surface"
+          >
+            <Share2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Share</span>
+          </Button>
+        )}
         <UserMenu />
       </header>
 
