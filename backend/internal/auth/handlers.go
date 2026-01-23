@@ -51,6 +51,12 @@ func writeError(w http.ResponseWriter, status int, message string) {
 
 // setRefreshTokenCookie sets the refresh token cookie
 func (h *Handlers) setRefreshTokenCookie(w http.ResponseWriter, token string, expiresAt time.Time) {
+	// Use SameSite=None for cross-origin requests (frontend and API on different subdomains)
+	// This requires Secure=true, which is set in production
+	sameSite := http.SameSiteLaxMode
+	if h.secureCookie {
+		sameSite = http.SameSiteNoneMode
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     RefreshTokenCookieName,
 		Value:    token,
@@ -58,12 +64,16 @@ func (h *Handlers) setRefreshTokenCookie(w http.ResponseWriter, token string, ex
 		Expires:  expiresAt,
 		HttpOnly: true,
 		Secure:   h.secureCookie,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: sameSite,
 	})
 }
 
 // clearRefreshTokenCookie clears the refresh token cookie
 func (h *Handlers) clearRefreshTokenCookie(w http.ResponseWriter) {
+	sameSite := http.SameSiteLaxMode
+	if h.secureCookie {
+		sameSite = http.SameSiteNoneMode
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     RefreshTokenCookieName,
 		Value:    "",
@@ -71,12 +81,16 @@ func (h *Handlers) clearRefreshTokenCookie(w http.ResponseWriter) {
 		Expires:  time.Unix(0, 0),
 		HttpOnly: true,
 		Secure:   h.secureCookie,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: sameSite,
 	})
 }
 
 // setCSRFTokenCookie sets the CSRF token cookie (readable by JavaScript)
 func (h *Handlers) setCSRFTokenCookie(w http.ResponseWriter, token string) {
+	sameSite := http.SameSiteLaxMode
+	if h.secureCookie {
+		sameSite = http.SameSiteNoneMode
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     CSRFTokenCookieName,
 		Value:    token,
@@ -84,7 +98,7 @@ func (h *Handlers) setCSRFTokenCookie(w http.ResponseWriter, token string) {
 		Expires:  time.Now().Add(CSRFTokenDuration),
 		HttpOnly: false, // Must be readable by JavaScript
 		Secure:   h.secureCookie,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: sameSite,
 	})
 }
 
