@@ -7,6 +7,7 @@ import type { Document, Token } from '@speed-reader/types';
 import { UserMenu } from '../components/UserMenu';
 import { ShareModal } from '../components/ShareModal';
 import { useDocumentStorage, useIsLocalStorage } from '../storage';
+import { useSettings } from '../contexts/SettingsContext';
 
 const TOKENS_PER_CHUNK = 5000;
 const SAVE_INTERVAL = 5000; // 5 seconds
@@ -18,6 +19,7 @@ function ReaderView() {
   const isLocalStorage = useIsLocalStorage();
   const storageRef = useRef(storage);
   storageRef.current = storage;
+  const { settings } = useSettings();
 
   const [document, setDocument] = useState<Document | null>(null);
   const [currentTokens, setCurrentTokens] = useState<Token[]>([]);
@@ -34,6 +36,7 @@ function ReaderView() {
   const positionRef = useRef(position);
   const configRef = useRef(config);
   const hasLoadedReadingStateRef = useRef(false);
+  const autoPlayTriggeredRef = useRef(false);
 
   const { elapsedFormatted, totalFormatted } = useReadingTimer({
     tokens: loadedTokens,
@@ -129,6 +132,15 @@ function ReaderView() {
         }
 
         setLoading(false);
+
+        // Auto-play if enabled in settings (only once per document load)
+        if (settings.autoPlayOnOpen && !autoPlayTriggeredRef.current && engineRef.current) {
+          autoPlayTriggeredRef.current = true;
+          // Small delay to ensure everything is rendered
+          setTimeout(() => {
+            engineRef.current?.play();
+          }, 100);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load document');
         setLoading(false);
@@ -136,7 +148,7 @@ function ReaderView() {
     }
 
     loadDocument();
-  }, [id, navigate]);
+  }, [id, navigate, settings.autoPlayOnOpen]);
 
   // Auto-save reading state
   useEffect(() => {
@@ -279,7 +291,7 @@ function ReaderView() {
       )}
 
       <main className="flex-1 flex items-center justify-center p-4 md:p-8">
-        <RSVPDisplay tokens={currentTokens} />
+        <RSVPDisplay tokens={currentTokens} fontSize={settings.fontSize} />
       </main>
 
       <footer className="flex flex-col gap-4 p-4 md:px-8 md:py-6 bg-bg-elevated/80 backdrop-blur-sm border-t border-border-subtle">
