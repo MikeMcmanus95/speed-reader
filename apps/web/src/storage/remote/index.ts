@@ -1,0 +1,1 @@
+export { RemoteDocumentStorage } from './RemoteDocumentStorage';

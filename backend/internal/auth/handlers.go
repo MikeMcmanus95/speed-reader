@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 const (
@@ -102,41 +100,9 @@ func (h *Handlers) setCSRFTokenCookie(w http.ResponseWriter, token string) {
 	})
 }
 
-// CreateGuest handles POST /api/auth/guest
-func (h *Handlers) CreateGuest(w http.ResponseWriter, r *http.Request) {
-	authResponse, refreshToken, err := h.service.CreateGuestUser(r.Context())
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to create guest user")
-		return
-	}
-
-	// Set refresh token cookie
-	h.setRefreshTokenCookie(w, refreshToken, time.Now().Add(RefreshTokenDuration))
-
-	// Generate and set CSRF token
-	csrfToken, err := h.service.GenerateCSRFToken()
-	if err == nil {
-		h.setCSRFTokenCookie(w, csrfToken)
-	}
-
-	writeJSON(w, http.StatusCreated, authResponse)
-}
-
 // GoogleLogin handles GET /api/auth/google
 func (h *Handlers) GoogleLogin(w http.ResponseWriter, r *http.Request) {
-	// Read guest ID from query parameter (passed by frontend when user is a guest)
-	// This enables document migration when a guest user signs up
-	var url string
-	if guestIDStr := r.URL.Query().Get("guest_id"); guestIDStr != "" {
-		if guestID, err := uuid.Parse(guestIDStr); err == nil {
-			url = h.service.GetGoogleAuthURL(&guestID)
-		} else {
-			url = h.service.GetGoogleAuthURL(nil)
-		}
-	} else {
-		url = h.service.GetGoogleAuthURL(nil)
-	}
-
+	url := h.service.GetGoogleAuthURL()
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
@@ -148,9 +114,7 @@ func (h *Handlers) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	state := r.URL.Query().Get("state")
-
-	authResponse, refreshToken, err := h.service.HandleGoogleCallback(r.Context(), code, state)
+	authResponse, refreshToken, err := h.service.HandleGoogleCallback(r.Context(), code)
 	if err != nil {
 		http.Redirect(w, r, h.frontendURL+"?error=auth_failed", http.StatusTemporaryRedirect)
 		return
@@ -233,15 +197,7 @@ func (h *Handlers) ExtensionGoogleLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Store extension_id in state along with optional guest_id
-	var guestID *uuid.UUID
-	if guestIDStr := r.URL.Query().Get("guest_id"); guestIDStr != "" {
-		if id, err := uuid.Parse(guestIDStr); err == nil {
-			guestID = &id
-		}
-	}
-
-	url := h.service.GetExtensionGoogleAuthURL(extensionID, guestID)
+	url := h.service.GetExtensionGoogleAuthURL(extensionID)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 

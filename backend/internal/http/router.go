@@ -56,7 +56,7 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 	r.Route("/api", func(r chi.Router) {
 		// Auth routes (no auth required for most)
 		r.Route("/auth", func(r chi.Router) {
-			r.Post("/guest", authHandlers.CreateGuest)
+			// Guest endpoint removed - unauthenticated users use local storage
 			r.Get("/google", authHandlers.GoogleLogin)
 			r.Get("/google/callback", authHandlers.GoogleCallback)
 			r.Post("/refresh", authHandlers.Refresh)

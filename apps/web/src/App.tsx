@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
+import { DocumentStorageProvider } from './storage';
 import { PasteInputView } from './views';
 
 const ReaderView = lazy(() => import('./views/ReaderView'));
@@ -32,17 +33,19 @@ function AuthCallback() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Suspense fallback={<LoadingFallback />}>
-          <Routes>
-            <Route path="/" element={<PasteInputView />} />
-            <Route path="/library" element={<LibraryView />} />
-            <Route path="/read/:id" element={<ReaderView />} />
-            <Route path="/shared/:token" element={<SharedDocView />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
+      <DocumentStorageProvider>
+        <BrowserRouter>
+          <Suspense fallback={<LoadingFallback />}>
+            <Routes>
+              <Route path="/" element={<PasteInputView />} />
+              <Route path="/library" element={<LibraryView />} />
+              <Route path="/read/:id" element={<ReaderView />} />
+              <Route path="/shared/:token" element={<SharedDocView />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </DocumentStorageProvider>
     </AuthProvider>
   );
 }
