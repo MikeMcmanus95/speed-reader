@@ -1,6 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f0a623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="m16 6 4 14"/>
-  <path d="M12 6v14"/>
-  <path d="M8 8v12"/>
-  <path d="M4 4v16"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 6 112 76" fill="none">
+  <g stroke="#FFB000" stroke-linecap="round" stroke-linejoin="round">
+    
+    <!-- Book outline -->
+    <g stroke-width="6">
+      <!-- Left page -->
+      <path d="M64 16
+               C48 8, 28 10, 14 18
+               C14 18, 14 70, 14 70
+               C28 62, 48 60, 64 68"></path>
+      <!-- Right page -->
+      <path d="M64 16
+               C80 8, 100 10, 114 18
+               C114 18, 114 70, 114 70
+               C100 62, 80 60, 64 68"></path>
+      <!-- Spine -->
+      <path d="M64 16 L64 70"></path>
+      <!-- Bottom curve -->
+      <path d="M18 72 C34 64, 50 64, 64 70
+               C78 64, 94 64, 110 72"></path>
+    </g>
+
+    <!-- Writing squiggles -->
+    <g stroke-width="2">
+      <!-- Left page -->
+      <path d="M26 32 C34 30, 40 34, 48 32"></path>
+      <path d="M24 40 C32 38, 42 42, 52 40"></path>
+      <path d="M26 48 C36 46, 44 50, 54 48"></path>
+
+      <!-- Right page -->
+      <path d="M74 32 C82 30, 90 34, 100 32"></path>
+      <path d="M76 40 C86 38, 94 42, 104 40"></path>
+      <path d="M74 48 C84 46, 92 50, 102 48"></path>
+    </g>
+
+  </g>
 </svg>
