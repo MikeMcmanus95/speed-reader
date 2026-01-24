@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, LogIn, LogOut, ChevronDown } from 'lucide-react';
+import { User, LogIn, LogOut, ChevronDown, Settings } from 'lucide-react';
 import { Button, cn } from '@speed-reader/ui';
 import { useAuth } from '../hooks/useAuth';
 
@@ -8,6 +9,7 @@ export function UserMenu() {
   const { user, isLoading, login, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   // Close menu when clicking outside - uses document listener to work across stacking contexts
   useEffect(() => {
@@ -121,6 +123,22 @@ export function UserMenu() {
               </div>
 
               <div className="p-2">
+                {/* Settings link - always visible */}
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    navigate('/settings');
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-bg-surface transition-colors group cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-full bg-bg-surface flex items-center justify-center group-hover:bg-amber-400/10 transition-colors">
+                    <Settings className="w-4 h-4 text-text-tertiary group-hover:text-amber-400 transition-colors" />
+                  </div>
+                  <div className="text-sm text-text-primary">
+                    Settings
+                  </div>
+                </button>
+
                 {user.isGuest ? (
                   <button
                     onClick={() => {
