@@ -1,9 +1,30 @@
 import React, { useRef, useLayoutEffect, useState, useCallback } from 'react';
 import type { Token } from '@speed-reader/types';
 
+type FontSizeSetting = 'small' | 'medium' | 'large';
+
 interface RSVPDisplayProps {
   tokens: Token[];
+  fontSize?: FontSizeSetting;
 }
+
+const fontSizeClasses: Record<FontSizeSetting, { single: string; multi: string; ready: string }> = {
+  small: {
+    single: 'text-2xl md:text-4xl',
+    multi: 'text-xl md:text-3xl',
+    ready: 'text-2xl md:text-4xl',
+  },
+  medium: {
+    single: 'text-3xl md:text-5xl',
+    multi: 'text-2xl md:text-4xl',
+    ready: 'text-3xl md:text-5xl',
+  },
+  large: {
+    single: 'text-4xl md:text-6xl',
+    multi: 'text-3xl md:text-5xl',
+    ready: 'text-4xl md:text-6xl',
+  },
+};
 
 // Singleton canvas for text measurements (avoids memory leak from repeated canvas creation)
 let measurementCanvas: HTMLCanvasElement | null = null;
@@ -22,7 +43,8 @@ function measureTextWidth(text: string, font: string): number {
   return context.measureText(text).width;
 }
 
-export const RSVPDisplay = React.memo(function RSVPDisplay({ tokens }: RSVPDisplayProps) {
+export const RSVPDisplay = React.memo(function RSVPDisplay({ tokens, fontSize = 'medium' }: RSVPDisplayProps) {
+  const sizeClasses = fontSizeClasses[fontSize];
   const wordRef = useRef<HTMLDivElement>(null);
   const [pivotOffset, setPivotOffset] = useState<number>(0);
 
@@ -72,7 +94,7 @@ export const RSVPDisplay = React.memo(function RSVPDisplay({ tokens }: RSVPDispl
   if (tokens.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[200px] p-8 relative">
-        <div className="text-3xl md:text-5xl font-rsvp font-medium tracking-wide whitespace-nowrap">
+        <div className={`${sizeClasses.ready} font-rsvp font-medium tracking-wide whitespace-nowrap`}>
           <span className="text-text-tertiary italic">Ready</span>
         </div>
       </div>
@@ -85,7 +107,7 @@ export const RSVPDisplay = React.memo(function RSVPDisplay({ tokens }: RSVPDispl
       <div className="flex flex-col items-center justify-center min-h-[200px] p-8 relative">
         <div
           data-testid="rsvp-chunk"
-          className="text-2xl md:text-4xl font-rsvp font-medium tracking-wide whitespace-nowrap"
+          className={`${sizeClasses.multi} font-rsvp font-medium tracking-wide whitespace-nowrap`}
         >
           {tokens.map((tkn, idx) => (
             <span key={idx} className="text-text-primary">
@@ -108,7 +130,7 @@ export const RSVPDisplay = React.memo(function RSVPDisplay({ tokens }: RSVPDispl
     <div className="flex flex-col items-center justify-center min-h-[200px] p-8 relative">
       <div
         ref={wordRef}
-        className="text-3xl md:text-5xl font-rsvp font-medium tracking-wide whitespace-nowrap"
+        className={`${sizeClasses.single} font-rsvp font-medium tracking-wide whitespace-nowrap`}
         style={{ transform: `translateX(${pivotOffset}px)` }}
       >
         <span data-testid="rsvp-before" className="text-text-primary">{before}</span>
