@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Plus, Library, FileText } from 'lucide-react';
+import { Plus, FileText } from 'lucide-react';
 import { Button } from '@speed-reader/ui';
 import type { DocumentWithProgress } from '@speed-reader/types';
 import { DocumentCard } from '../components/DocumentCard';
@@ -65,7 +65,7 @@ function LibraryView() {
               className="p-1 -m-1 rounded-lg hover:bg-bg-elevated transition-colors cursor-pointer"
               aria-label="Go to new document"
             >
-              <Library className="w-6 h-6 text-amber-400" />
+              <img src="/logo.svg" alt="Speed Reader" className="w-6 h-6" />
             </button>
             <h1 className="text-xl md:text-2xl font-serif font-semibold text-text-primary">
               My Library

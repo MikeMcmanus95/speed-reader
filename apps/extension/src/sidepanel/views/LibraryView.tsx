@@ -52,6 +52,7 @@ export function LibraryView({ onSelect, onBack }: LibraryViewProps) {
         <Button variant="ghost" size="icon-sm" onClick={onBack}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
+        <img src="/logo.svg" alt="Speed Reader" className="w-5 h-5" />
         <h1 className="text-lg font-semibold">Library</h1>
         <span className="text-sm text-text-tertiary">
           ({documents.length})
