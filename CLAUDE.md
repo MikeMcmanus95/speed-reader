@@ -29,6 +29,11 @@ make db-reset   # Reset database (destroys data)
 cd backend && go test -bench=. ./internal/tokenizer/
 ```
 
+## Git Workflow
+
+- **Large features**: Always use git worktrees to work on large features in isolation
+- **Pull requests**: Always use the `gh` CLI to create and manage PRs
+
 ## Architecture
 
 This is an RSVP (Rapid Serial Visual Presentation) speed reading app with a Go backend and React/TypeScript frontend.

@@ -44,8 +44,17 @@ export function PasteInputView() {
 
   return (
     <div className="min-h-screen bg-warm-gradient bg-grain flex flex-col">
-      {/* Header with UserMenu */}
-      <header className="fixed top-0 right-0 z-20 p-4">
+      {/* Header with My Library and UserMenu */}
+      <header className="fixed top-0 right-0 z-20 p-4 flex items-center gap-3">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate('/library')}
+          className="gap-2"
+        >
+          <Library className="w-4 h-4" />
+          My Library
+        </Button>
         <UserMenu />
       </header>
 
@@ -59,7 +68,7 @@ export function PasteInputView() {
                 transition={{ duration: 0.5, ease: 'easeOut' }}
                 className="flex items-center justify-center gap-3"
               >
-                <Library className="w-10 h-10 md:w-12 md:h-12 text-amber-400" />
+                <img src="/logo.svg" alt="Speed Reader" className="w-10 h-10 md:w-12 md:h-12" />
                 <CardTitle className="text-4xl md:text-5xl font-serif font-semibold bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 bg-clip-text text-transparent">
                   Speed Reader
                 </CardTitle>
@@ -72,21 +81,6 @@ export function PasteInputView() {
                 <CardDescription className="text-text-secondary text-base mt-2 font-serif italic">
                   Paste your text below to begin
                 </CardDescription>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.15, ease: 'easeOut' }}
-                className="mt-4"
-              >
-                <Button
-                  variant="outline"
-                  onClick={() => navigate('/library')}
-                  className="gap-2"
-                >
-                  <Library className="w-4 h-4" />
-                  My Library
-                </Button>
               </motion.div>
             </CardHeader>
 
