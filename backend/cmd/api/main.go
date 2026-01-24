@@ -20,6 +20,7 @@ import (
 	"github.com/mikepersonal/speed-reader/backend/internal/documents"
 	httpHandler "github.com/mikepersonal/speed-reader/backend/internal/http"
 	"github.com/mikepersonal/speed-reader/backend/internal/logging"
+	"github.com/mikepersonal/speed-reader/backend/internal/settings"
 	"github.com/mikepersonal/speed-reader/backend/internal/sharing"
 	"github.com/mikepersonal/speed-reader/backend/internal/storage"
 	"github.com/mikepersonal/speed-reader/backend/internal/telemetry"
@@ -128,15 +129,20 @@ func main() {
 	// Initialize sharing service
 	sharingService := sharing.NewService(db, cfg.FrontendURL)
 
+	// Initialize settings service
+	settingsRepo := settings.NewRepository(db)
+	settingsService := settings.NewService(settingsRepo)
+
 	// Create router with all dependencies
 	router := httpHandler.NewRouter(&httpHandler.RouterDeps{
-		DocService:     docService,
-		AuthService:    authService,
-		SharingService: sharingService,
-		FrontendURL:    cfg.FrontendURL,
-		SecureCookie:   cfg.SecureCookie,
-		Logger:         logger,
-		Sanitizer:      sanitizer,
+		DocService:      docService,
+		AuthService:     authService,
+		SharingService:  sharingService,
+		SettingsService: settingsService,
+		FrontendURL:     cfg.FrontendURL,
+		SecureCookie:    cfg.SecureCookie,
+		Logger:          logger,
+		Sanitizer:       sanitizer,
 	})
 
 	// Setup graceful shutdown
