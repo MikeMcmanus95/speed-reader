@@ -16,6 +16,13 @@ type PauseMultipliers struct {
 	Paragraph float64 `json:"paragraph"`
 }
 
+// PauseMultipliersUpdate contains optional pause multiplier updates.
+type PauseMultipliersUpdate struct {
+	Comma     *float64 `json:"comma,omitempty"`
+	Sentence  *float64 `json:"sentence,omitempty"`
+	Paragraph *float64 `json:"paragraph,omitempty"`
+}
+
 // Settings represents user preferences stored in the database
 type Settings struct {
 	DefaultWPM       int              `json:"defaultWpm"`
@@ -43,11 +50,11 @@ func DefaultSettings() *Settings {
 // UpdateSettingsRequest represents a partial update to settings
 // All fields are pointers so we can distinguish between "not provided" and "set to zero value"
 type UpdateSettingsRequest struct {
-	DefaultWPM       *int              `json:"defaultWpm,omitempty"`
-	DefaultChunkSize *int              `json:"defaultChunkSize,omitempty"`
-	AutoPlayOnOpen   *bool             `json:"autoPlayOnOpen,omitempty"`
-	PauseMultipliers *PauseMultipliers `json:"pauseMultipliers,omitempty"`
-	FontSize         *FontSize         `json:"fontSize,omitempty"`
+	DefaultWPM       *int                    `json:"defaultWpm,omitempty"`
+	DefaultChunkSize *int                    `json:"defaultChunkSize,omitempty"`
+	AutoPlayOnOpen   *bool                   `json:"autoPlayOnOpen,omitempty"`
+	PauseMultipliers *PauseMultipliersUpdate `json:"pauseMultipliers,omitempty"`
+	FontSize         *FontSize               `json:"fontSize,omitempty"`
 }
 
 // Merge applies the update request to settings, returning a new Settings with updates applied
@@ -64,15 +71,14 @@ func (s *Settings) Merge(update *UpdateSettingsRequest) *Settings {
 		result.AutoPlayOnOpen = *update.AutoPlayOnOpen
 	}
 	if update.PauseMultipliers != nil {
-		// Merge individual multiplier fields (0 means "keep existing")
-		if update.PauseMultipliers.Comma != 0 {
-			result.PauseMultipliers.Comma = update.PauseMultipliers.Comma
+		if update.PauseMultipliers.Comma != nil {
+			result.PauseMultipliers.Comma = *update.PauseMultipliers.Comma
 		}
-		if update.PauseMultipliers.Sentence != 0 {
-			result.PauseMultipliers.Sentence = update.PauseMultipliers.Sentence
+		if update.PauseMultipliers.Sentence != nil {
+			result.PauseMultipliers.Sentence = *update.PauseMultipliers.Sentence
 		}
-		if update.PauseMultipliers.Paragraph != 0 {
-			result.PauseMultipliers.Paragraph = update.PauseMultipliers.Paragraph
+		if update.PauseMultipliers.Paragraph != nil {
+			result.PauseMultipliers.Paragraph = *update.PauseMultipliers.Paragraph
 		}
 	}
 	if update.FontSize != nil {

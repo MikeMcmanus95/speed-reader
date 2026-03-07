@@ -37,7 +37,13 @@ export const DEFAULT_SETTINGS: UserSettings = {
   fontSize: 'medium',
 };
 
-export type UpdateSettingsRequest = Partial<UserSettings>;
+export interface UpdateSettingsRequest {
+  defaultWpm?: number;
+  defaultChunkSize?: number;
+  autoPlayOnOpen?: boolean;
+  pauseMultipliers?: Partial<PauseMultipliers>;
+  fontSize?: FontSize;
+}
 
 export interface AuthResponse {
   user: User;

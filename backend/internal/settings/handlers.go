@@ -1,24 +1,31 @@
 package settings
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
-	"strings"
 
+	"github.com/google/uuid"
 	"github.com/mikepersonal/speed-reader/backend/internal/auth"
 	"github.com/mikepersonal/speed-reader/backend/internal/logging"
 	"golang.org/x/exp/slog"
 )
 
+type settingsService interface {
+	GetSettings(ctx context.Context, userID uuid.UUID) (*Settings, error)
+	UpdateSettings(ctx context.Context, userID uuid.UUID, update *UpdateSettingsRequest) (*Settings, error)
+}
+
 // Handlers contains HTTP handlers for settings
 type Handlers struct {
-	service   *Service
+	service   settingsService
 	logger    *slog.Logger
 	sanitizer *logging.Sanitizer
 }
 
 // NewHandlers creates a new settings Handlers instance
-func NewHandlers(service *Service, logger *slog.Logger, sanitizer *logging.Sanitizer) *Handlers {
+func NewHandlers(service settingsService, logger *slog.Logger, sanitizer *logging.Sanitizer) *Handlers {
 	return &Handlers{
 		service:   service,
 		logger:    logger,
@@ -62,7 +69,7 @@ func (h *Handlers) GetSettings(w http.ResponseWriter, r *http.Request) {
 		if we != nil {
 			we.AddError(err)
 		}
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, ErrUserNotFound) {
 			writeError(w, http.StatusNotFound, "user not found")
 			return
 		}
@@ -120,12 +127,11 @@ func (h *Handlers) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		if we != nil {
 			we.AddError(err)
 		}
-		// Check if it's a validation error
-		if strings.Contains(err.Error(), "must be") {
+		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, ErrUserNotFound) {
 			writeError(w, http.StatusNotFound, "user not found")
 			return
 		}

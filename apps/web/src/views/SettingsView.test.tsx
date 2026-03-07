@@ -41,6 +41,22 @@ describe('SettingsView', () => {
     mockResetToDefaults.mockResolvedValue(DEFAULT_SETTINGS);
   });
 
+  it('explains immediate vs default-applied settings behavior', () => {
+    render(
+      <MemoryRouter initialEntries={['/settings']}>
+        <Routes>
+          <Route path="/settings" element={<SettingsView />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(
+      screen.getByText(
+        'Customize your reading experience. Font size applies immediately; other settings are defaults for new documents.'
+      )
+    ).toBeInTheDocument();
+  });
+
   it('discards unsaved changes and resumes pending navigation when leaving', async () => {
     render(
       <MemoryRouter initialEntries={['/library', '/settings']} initialIndex={1}>
