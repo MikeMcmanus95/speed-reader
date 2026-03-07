@@ -221,7 +221,7 @@ Use this only when completion is blocked by missing required tools or missing au
     - You may make temporary local proof edits to validate assumptions (for example: tweak a local build input for `make`, or hardcode a UI account / response path) when this increases confidence.
     - Revert every temporary proof edit before commit/push.
     - Document these temporary proof steps and outcomes in the workpad `Validation`/`Notes` sections so reviewers can follow the evidence.
-    - If app-touching, run `launch-app` validation and capture/upload media via `github-pr-media` before handoff.
+    - If app-touching, follow `App runtime validation (required)` before handoff.
 6.  Re-check all acceptance criteria and close any gaps.
 7.  Before every `git push` attempt, run the required validation for your scope and confirm it passes; if it fails, address issues and rerun until green, then commit and push changes.
 8.  Attach PR URL to the issue (prefer attachment; use the workpad comment only if attachment is unavailable).
@@ -277,6 +277,24 @@ Use this only when completion is blocked by missing required tools or missing au
 - PR checks are green, branch is pushed, and PR is linked on the issue.
 - Required PR metadata is present (`symphony` label).
 - If app-touching, runtime validation/media requirements from `App runtime validation (required)` are complete.
+
+## App runtime validation (required)
+
+For app-touching changes, runtime validation must include media evidence on the PR.
+
+Preferred path:
+
+1. If `launch-app` is available, use it for runtime validation.
+2. If `github-pr-media` is available, upload screenshots/recordings from the validation run and attach them to the PR.
+
+Fallback path (required when one or both commands are unavailable; do not treat missing commands as an immediate blocker):
+
+1. Start the app manually using repo commands for the touched surface (for example `pnpm dev:web`).
+2. Capture screenshots/recordings with available tools (for example Playwright) into a repo path such as `docs/pr-media/<issue-id>/`.
+3. Ensure media is visible from the PR by committing those files on the branch and adding a PR comment with Markdown image/video links using `gh pr comment --body-file`.
+4. Record exact commands, artifact paths, and PR comment URL in the workpad `Validation` section.
+
+Only report blocked if both preferred and fallback paths are not possible in-session.
 
 ## Guardrails
 
