@@ -28,7 +28,16 @@ export class LocalSettingsStorage {
       if (stored) {
         const parsed = JSON.parse(stored) as Partial<UserSettings>;
         // Merge with defaults to ensure all fields are present
-        return { ...DEFAULT_SETTINGS, ...parsed };
+        const merged = { ...DEFAULT_SETTINGS, ...parsed };
+
+        if (parsed.pauseMultipliers) {
+          merged.pauseMultipliers = {
+            ...DEFAULT_SETTINGS.pauseMultipliers,
+            ...parsed.pauseMultipliers,
+          };
+        }
+
+        return merged;
       }
     } catch (err) {
       console.error('Failed to load settings from localStorage:', err);

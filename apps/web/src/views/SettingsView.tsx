@@ -91,10 +91,10 @@ function SettingsView() {
   }, [draftSettings, updateSettings, isSaving]);
 
   // Discard changes and reset draft
-  const handleDiscard = useCallback((navigate = true) => {
+  const handleDiscard = useCallback((shouldNavigate = true) => {
     setDraftSettings(settings);
     setIsDiscardDialogOpen(false);
-    if (navigate && pendingNavigation) {
+    if (shouldNavigate && pendingNavigation) {
       pendingNavigation();
     }
     setPendingNavigation(null);
