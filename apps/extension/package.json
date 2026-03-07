@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "pnpm --filter @speed-reader/types build && pnpm --filter @speed-reader/tokenizer build && pnpm --filter @speed-reader/engine build && pnpm --filter @speed-reader/api-client build && pnpm --filter @speed-reader/ui build",
     "build": "tsc && vite build --mode production",
+    "package": "pnpm run build && node ./scripts/package-extension.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist"
   },
