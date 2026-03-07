@@ -296,6 +296,7 @@ Use this only when completion is blocked by missing required tools or missing au
 - In `Human Review`, do not make changes; wait and poll.
 - If state is terminal (`Done`), do nothing and shut down.
 - Keep issue text concise, specific, and reviewer-oriented.
+- For any multi-line GitHub PR body/comment content, write Markdown to a temp file and use `--body-file`; never pass escaped `\n` sequences in `--body`.
 - If blocked and no workpad exists yet, add one blocker comment describing blocker, impact, and next unblock action.
 
 ## Workpad template

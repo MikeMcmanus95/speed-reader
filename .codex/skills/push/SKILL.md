@@ -52,6 +52,9 @@ description:
      scope (all intended work on the branch), not just the newest commits,
      including newly added work, removed work, or changed approach.
    - Do not reuse stale description text from earlier iterations.
+   - For multi-line content, always use `gh pr edit --body-file <file>` (or
+     `gh pr create --body-file <file>`). Never pass escaped `\n` text to
+     `--body`.
 7. Validate PR body with `mix pr_body.check` and fix all reported issues.
 8. Reply with the PR URL from `gh pr view`.
 

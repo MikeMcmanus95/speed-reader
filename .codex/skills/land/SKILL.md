@@ -192,11 +192,16 @@ Exit codes:
     synchronization (or you can re-run the workflow manually). Post a concise
     root-level summary comment so reviewers have the latest delta:
     ```
+    cat > /tmp/codex-review-update.md <<'EOF'
     [codex] Changes since last review:
     - <short bullets of deltas>
     Commits: <sha>, <sha>
     Tests: <commands run>
+    EOF
+    gh pr comment <pr_number> --body-file /tmp/codex-review-update.md
     ```
+  - Never use `gh pr comment --body "...\n..."` for multi-line comments; use
+    `--body-file`.
   - Only request a new review if there is at least one new commit since the
     previous request.
   - Wait for the next Codex review comment before merging.
