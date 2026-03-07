@@ -16,6 +16,7 @@ import {
   setRefreshTokenFn,
 } from '@speed-reader/api-client';
 import { MigrationService } from '../storage/MigrationService';
+import { SettingsMigrationService } from '../settings';
 
 interface AuthState {
   user: User | null;
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const [tokenExpiresAt, setTokenExpiresAt] = useState<Date | null>(null);
   const migrationServiceRef = useRef<MigrationService | null>(null);
+  const settingsMigrationServiceRef = useRef<SettingsMigrationService | null>(null);
 
   // Get or create migration service
   const getMigrationService = useCallback(() => {
@@ -56,6 +58,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       migrationServiceRef.current = new MigrationService();
     }
     return migrationServiceRef.current;
+  }, []);
+
+  // Get or create settings migration service
+  const getSettingsMigrationService = useCallback(() => {
+    if (!settingsMigrationServiceRef.current) {
+      settingsMigrationServiceRef.current = new SettingsMigrationService();
+    }
+    return settingsMigrationServiceRef.current;
   }, []);
 
   // Sync access token with API client
@@ -131,11 +141,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const response = await refreshTokenApi();
 
-      // Check if there are local documents to migrate
+      // Check if there are local documents or settings to migrate
       const migrationService = getMigrationService();
+      const settingsMigrationService = getSettingsMigrationService();
       const hasLocalDocs = await migrationService.hasLocalDocuments();
+      const hasLocalSettings = settingsMigrationService.hasLocalSettings();
 
-      if (hasLocalDocs) {
+      if (hasLocalDocs || hasLocalSettings) {
         setState(prev => ({
           ...prev,
           user: response.user,
@@ -147,13 +159,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setTokenExpiresAt(new Date(response.expiresAt));
 
         // Migrate local documents to the user's account
-        try {
-          const result = await migrationService.migrateLocalDocuments(response.user.id);
-          if (result.failedDocuments.length > 0) {
-            console.warn('Some documents failed to migrate:', result.failedDocuments);
+        if (hasLocalDocs) {
+          try {
+            const result = await migrationService.migrateLocalDocuments(response.user.id);
+            if (result.failedDocuments.length > 0) {
+              console.warn('Some documents failed to migrate:', result.failedDocuments);
+            }
+          } catch (err) {
+            console.error('Document migration failed:', err);
           }
-        } catch (err) {
-          console.error('Migration failed:', err);
+        }
+
+        // Migrate local settings to the user's account
+        if (hasLocalSettings) {
+          try {
+            await settingsMigrationService.migrateSettings();
+          } catch (err) {
+            console.error('Settings migration failed:', err);
+          }
         }
 
         setState(prev => ({ ...prev, isMigrating: false }));

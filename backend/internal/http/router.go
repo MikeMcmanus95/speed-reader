@@ -9,19 +9,21 @@ import (
 	"github.com/mikepersonal/speed-reader/backend/internal/auth"
 	"github.com/mikepersonal/speed-reader/backend/internal/documents"
 	"github.com/mikepersonal/speed-reader/backend/internal/logging"
+	"github.com/mikepersonal/speed-reader/backend/internal/settings"
 	"github.com/mikepersonal/speed-reader/backend/internal/sharing"
 	"golang.org/x/exp/slog"
 )
 
 // RouterDeps contains dependencies for the router
 type RouterDeps struct {
-	DocService     *documents.Service
-	AuthService    *auth.Service
-	SharingService *sharing.Service
-	FrontendURL    string
-	SecureCookie   bool
-	Logger         *slog.Logger
-	Sanitizer      *logging.Sanitizer
+	DocService      *documents.Service
+	AuthService     *auth.Service
+	SharingService  *sharing.Service
+	SettingsService *settings.Service
+	FrontendURL     string
+	SecureCookie    bool
+	Logger          *slog.Logger
+	Sanitizer       *logging.Sanitizer
 }
 
 // NewRouter creates a new HTTP router with all routes configured
@@ -45,6 +47,7 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 	// Handlers
 	docHandlers := NewHandlers(deps.DocService, deps.SharingService, deps.Logger, deps.Sanitizer)
 	authHandlers := auth.NewHandlers(deps.AuthService, deps.FrontendURL, deps.SecureCookie)
+	settingsHandlers := settings.NewHandlers(deps.SettingsService, deps.Logger, deps.Sanitizer)
 
 	// Health check endpoint (outside /api for simplicity)
 	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
@@ -102,6 +105,14 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 		r.Route("/shared", func(r chi.Router) {
 			r.Get("/{token}", docHandlers.GetSharedDocument)
 			r.Get("/{token}/tokens", docHandlers.GetSharedDocumentTokens)
+		})
+
+		// Settings routes (require auth)
+		r.Route("/settings", func(r chi.Router) {
+			r.Use(auth.RequireAuth(deps.AuthService))
+			r.Use(auth.ValidateCSRF(deps.AuthService))
+			r.Get("/", settingsHandlers.GetSettings)
+			r.Put("/", settingsHandlers.UpdateSettings)
 		})
 	})
 
