@@ -1,4 +1,4 @@
-.PHONY: all build run test clean dev db-up db-down observability-up observability-down observability-logs install
+.PHONY: all build run test clean dev db-up db-down observability-up observability-down observability-logs install harness-check harness-eval ci-required ci-full
 
 # Default target
 all: build
@@ -96,3 +96,16 @@ o11y-logs:
 # Type checking
 typecheck:
 	pnpm typecheck
+
+# Harness checks and evals
+harness-check:
+	pnpm harness:check
+
+harness-eval:
+	pnpm harness:eval
+
+ci-required:
+	pnpm ci:required
+
+ci-full:
+	pnpm ci:full

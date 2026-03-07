@@ -1,228 +1,71 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file is the canonical agent contract for this repository.
 
-## Build & Development Commands
+## Harness Contract
+
+### Mission
+
+Deliver changes that are deterministic, verifiable, and architecture-consistent.
+
+### Required Commands Before Merge
 
 ```bash
-# Start development (runs DB + backend + frontend concurrently)
+pnpm harness:check
+pnpm harness:eval
+cd backend && go test ./...
+```
+
+### Command Reference
+
+```bash
+# Development
 make dev
+make db-up
+make db-down
 
-# Run all tests
-make test
-
-# Run tests individually
-cd backend && go test -v ./...                    # All backend tests
-cd backend && go test -v ./internal/tokenizer/   # Single package
-cd frontend && npm test                           # Frontend (watch mode)
-cd frontend && npm run test:run                   # Frontend (single run)
-
-# Build for production
+# Build
 make build
 
-# Database management
-make db-up      # Start PostgreSQL container
-make db-down    # Stop PostgreSQL
-make db-reset   # Reset database (destroys data)
-
-# Benchmarks
-cd backend && go test -bench=. ./internal/tokenizer/
+# Quality
+pnpm ci:required
+pnpm ci:full
+make harness-check
+make harness-eval
 ```
 
-## Git Workflow
+### Architecture Map
 
-- **Large features**: Always use git worktrees to work on large features in isolation
-- **Pull requests**: Always use the `gh` CLI to create and manage PRs
+- Backend entrypoint: `backend/cmd/api/main.go`
+- Backend core layers: `internal/config -> internal/storage -> internal/tokenizer -> internal/telemetry -> internal/logging -> internal/documents -> internal/http`
+- Frontend app: `apps/web`
+- Extension app: `apps/extension`
+- Shared packages: `packages/types`, `packages/tokenizer`, `packages/engine`, `packages/ui`, `packages/api-client`
+- Harness system-of-record: `harness/`
 
-## Architecture
+### Agent Rules
 
-This is an RSVP (Rapid Serial Visual Presentation) speed reading app with a Go backend and React/TypeScript frontend.
+- Prefer deterministic tests with fixed inputs, fixed clocks, and no network dependencies.
+- When incidents/regressions occur, add or update a harness fixture/check in the same PR.
+- Keep `harness/registry.json` accurate for owners, commands, and gating levels.
+- Do not introduce new required CI gates that are known unstable.
 
-### Data Flow
+## Definition of Done
 
-```
-User pastes text → Backend tokenizes → Tokens stored in chunks → Frontend fetches chunks → RSVPEngine displays words
-```
+A change is done only when all are true:
 
-### Backend (`backend/`)
+1. `pnpm harness:check` passes.
+2. `pnpm harness:eval` passes.
+3. Backend tests pass: `cd backend && go test ./...`.
+4. If behavior changed, fixture expectations are updated intentionally.
+5. PR description includes a short note for any harness additions/updates.
 
-**Entry point**: `cmd/api/main.go` - wires together all services
+## Failure Playbooks
 
-**Package dependencies** (build order):
-1. `internal/config` - Environment configuration, constants (MaxPasteSize=1MB, ChunkSize=5000)
-2. `internal/storage` - Token struct definition, ChunkStore for JSON file I/O
-3. `internal/tokenizer` - Text processing: normalization, sentence splitting, pivot calculation, pause multipliers
-4. `internal/telemetry` - OpenTelemetry initialization (tracing)
-5. `internal/logging` - Structured logging, middleware, wide events, PII sanitization
-6. `internal/documents` - Repository (PostgreSQL CRUD) + Service (orchestrates tokenization and storage)
-7. `internal/http` - Chi router, handlers, middleware
+- Test discovery failures: `harness/playbooks/test-discovery-failures.md`
+- Flaky timing tests: `harness/playbooks/flaky-timing-tests.md`
+- Lint regressions: `harness/playbooks/lint-regressions.md`
 
-**API Endpoints**:
-- `POST /api/documents` - Create document (tokenizes text, writes chunks)
-- `GET /api/documents/:id` - Get document metadata
-- `GET /api/documents/:id/tokens?chunk=n` - Get token chunk
-- `GET /api/documents/:id/reading-state` - Get saved position/WPM
-- `PUT /api/documents/:id/reading-state` - Update reading progress
+## Frontend Design Guardrails
 
-**Key design decisions**:
-- Tokens are chunked into 5000-token JSON files in `data/doc_{id}/chunk_{n}.json`
-- Pause multipliers: comma=1.3×, sentence=1.8×, paragraph=2.2×
-- Pivot calculation: ~30% into word for optimal recognition point (ORP)
-
-### Frontend (`frontend/`)
-
-<frontend_aesthetics>
-You tend to converge toward generic, "on distribution" outputs. In frontend design, this creates what users call the "AI slop" aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight. Focus on:
-
-Typography: Choose fonts that are beautiful, unique, and interesting. Avoid generic fonts like Arial and Inter; opt instead for distinctive choices that elevate the frontend's aesthetics.
-
-Color & Theme: Commit to a cohesive aesthetic. Use CSS variables for consistency. Dominant colors with sharp accents outperform timid, evenly-distributed palettes. Draw from IDE themes and cultural aesthetics for inspiration.
-
-Motion: Use animations for effects and micro-interactions. Prioritize CSS-only solutions for HTML. Use Motion library for React when available. Focus on high-impact moments: one well-orchestrated page load with staggered reveals (animation-delay) creates more delight than scattered micro-interactions.
-
-Backgrounds: Create atmosphere and depth rather than defaulting to solid colors. Layer CSS gradients, use geometric patterns, or add contextual effects that match the overall aesthetic.
-
-Avoid generic AI-generated aesthetics:
-- Overused font families (Inter, Roboto, Arial, system fonts)
-- Clichéd color schemes (particularly purple gradients on white backgrounds)
-- Predictable layouts and component patterns
-- Cookie-cutter design that lacks context-specific character
-
-Interpret creatively and make unexpected choices that feel genuinely designed for the context. Vary between light and dark themes, different fonts, different aesthetics. You still tend to converge on common choices (Space Grotesk, for example) across generations. Avoid this: it is critical that you think outside the box!
-</frontend_aesthetics>
-
-**Core engine**: `src/engine/RSVPEngine.ts` - Timing loop using `requestAnimationFrame` with pause multiplier support
-
-**Component hierarchy**:
-- `views/PasteInputView` - Text input with 1MB limit, staggered entry animations
-- `views/ReaderView` - Main reader with vignette background, manages RSVPEngine lifecycle
-  - `components/RSVPDisplay` - Word display with copper pivot glow, Literata font
-  - `components/ControlBar` - Spring-animated amber play button, styled controls
-  - `components/ProgressBar` - Amber track/thumb with glow effects
-
-**Key behaviors**:
-- Prefetches next chunk at 80% through current chunk
-- Auto-saves reading state every 5 seconds
-- Keyboard: Space=toggle, Arrow keys=seek ±10 tokens
-
-#### Design System: "Nocturnal Scholar"
-
-A dark-first design inspired by late-night reading sessions and vintage libraries. Warm amber accents create focused comfort while reducing eye strain.
-
-**Typography** (Google Fonts):
-| Role | Font | Usage |
-|------|------|-------|
-| Primary | Newsreader | Titles, body text (`font-serif`) |
-| RSVP Display | Literata | Speed reading display (`font-rsvp`) |
-| Monospace | IBM Plex Mono | WPM counters, stats (`font-counter`) |
-
-**Color Palette** (`src/index.css` @theme):
-```css
-/* Backgrounds - warm darks */
---bg-deep: #0f0d0a;      /* Deepest background */
---bg-base: #1a1714;      /* Page background */
---bg-elevated: #252119;  /* Cards, modals */
---bg-surface: #2f2a23;   /* Input fields */
-
-/* Accents */
---amber-400: #f0a623;    /* Primary accent (buttons, focus) */
---copper-400: #ef8a4a;   /* Pivot character highlight */
-
-/* Text - warm cream tones */
---text-primary: #f5f0e8;
---text-secondary: #c4baa8;
---text-tertiary: #8a7f6e;
-```
-
-**Animations** (Motion library + CSS keyframes):
-- `animate-fade-in` - Page load staggered reveals
-- `animate-pivot-glow` - Copper glow pulse on pivot character
-- Spring physics on play/pause button (`whileTap`, `stiffness: 400`)
-- Word transitions with AnimatePresence
-
-**Background Utilities**:
-- `bg-grain` - Subtle SVG noise texture overlay
-- `bg-vignette` - Radial gradient focusing attention to center (reader view)
-- `bg-warm-gradient` - Warm diagonal gradient (landing page)
-
-**Component Styling Patterns**:
-- Buttons: Amber with glow shadows (`shadow-[0_0_12px_rgba(240,166,35,0.2)]`)
-- Inputs: Dark surface (`bg-bg-surface`), amber focus ring
-- Cards: Elevated background with subtle borders, backdrop blur
-- Sliders/Toggles: Amber accent on selected/active state
-
-### Database Schema
-
-Two tables in PostgreSQL:
-- `documents`: id, title, status (pending/processing/ready/error), token_count, chunk_count
-- `reading_state`: doc_id, token_index, wpm, chunk_size
-
-## Configuration
-
-Environment variables (see `backend/.env.example`):
-- `PORT` (default: 8080)
-- `DATABASE_URL` (default: postgres://speedreader:speedreader@localhost:5432/speedreader)
-- `STORAGE_PATH` (default: ./data)
-
-Frontend proxies `/api` to `localhost:8080` via Vite config.
-
-## Observability
-
-### Structured Logging
-
-The backend uses structured logging with slog (via `golang.org/x/exp/slog` for Go 1.20 compatibility).
-
-**Packages:**
-- `internal/logging` - Logger setup, middleware, wide events, PII sanitization
-- `internal/telemetry` - OpenTelemetry initialization
-
-**Log Levels:**
-- `debug` - Detailed debugging info (not for production)
-- `info` - Normal operations (request completed, service started)
-- `warn` - Recoverable issues (4xx errors, rate limiting)
-- `error` - Unrecoverable issues (5xx errors, connection failures)
-
-**Wide Events Pattern:**
-Request handlers accumulate metrics in a `WideEvent` and emit a single log at request end:
-```go
-we := logging.WideEventFromContext(r.Context())
-we.AddString("doc.id", id.String())
-we.AddInt("doc.token_count", doc.TokenCount)
-we.AddDuration("db_query", queryTime)
-// Emitted automatically by middleware at request end
-```
-
-**PII Sanitization:**
-NEVER log PII in plaintext. Use the Sanitizer:
-```go
-sanitizer.UserID(userID)       // "user_a1b2c3d4"
-sanitizer.Email(email)         // "f8e9d0c1@gmail.com"
-sanitizer.IPAddress(ip)        // "192.168.x.x"
-sanitizer.DocumentTitle(title) // Truncated to 50 chars
-```
-
-### Observability Stack
-
-Start the observability stack:
-```bash
-make observability-up   # Start Jaeger, Loki, Grafana
-make observability-down # Stop all services
-```
-
-**UIs:**
-- Grafana: http://localhost:3001 (admin/admin) - Dashboards for logs and traces
-- Jaeger: http://localhost:16686 - Distributed tracing
-
-**Environment Variables:**
-```bash
-LOG_LEVEL=info              # debug, info, warn, error
-LOG_SALT=change-in-prod     # Salt for PII pseudonymization
-OTLP_ENDPOINT=localhost:4317 # OTLP gRPC endpoint (empty=stdout)
-ENVIRONMENT=development     # development, staging, production
-```
-
-## Performance Targets
-
-- Tokenization: <200ms for 100k words (benchmarks at ~25ms)
-- RSVP timing jitter: <16ms (using requestAnimationFrame)
-- Chunk fetch: <50ms (pre-generated JSON files)
+Avoid generic UI output. Keep typography, color, and motion choices intentional and distinct for this product context.

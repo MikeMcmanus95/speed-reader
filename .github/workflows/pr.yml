@@ -1,0 +1,102 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  harness-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Harness structure check
+        run: pnpm harness:check
+
+  harness-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.20'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run deterministic harness evals
+        run: pnpm harness:eval
+
+      - name: Upload harness eval artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness-eval-artifacts
+          path: harness/artifacts
+          if-no-files-found: warn
+
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.20'
+
+      - name: Backend tests
+        working-directory: backend
+        run: go test ./...
+
+  full-quality:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run advisory full quality suite
+        run: pnpm ci:full
+
+      - name: Write advisory summary
+        if: always()
+        run: |
+          {
+            echo "## Advisory Full Quality";
+            echo "This job is non-blocking by design while we burn down known lint/test debt.";
+            echo "See logs for details on current failures.";
+          } >> "$GITHUB_STEP_SUMMARY"

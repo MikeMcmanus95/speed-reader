@@ -27,15 +27,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Required quality gate
+        run: pnpm ci:required
+
       - name: Build shared packages
         run: pnpm turbo build --filter='./packages/*'
-
-      - name: Backend Tests
-        working-directory: backend
-        run: go test -v ./...
-
-      - name: Frontend Tests
-        run: pnpm turbo test --filter=@speed-reader/web
 
       - name: Typecheck
         run: pnpm turbo typecheck

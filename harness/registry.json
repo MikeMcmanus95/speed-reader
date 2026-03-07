@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "owners": {
+    "harness": "platform",
+    "tokenizer_eval": "frontend",
+    "engine_eval": "frontend",
+    "backend_contract_eval": "backend"
+  },
+  "checks": [
+    {
+      "id": "harness_structure",
+      "description": "Required harness docs, registry fields, and playbooks are present and consistent",
+      "command": "pnpm harness:check",
+      "owner": "harness",
+      "gating": "required"
+    },
+    {
+      "id": "tokenizer_eval",
+      "description": "Tokenizer fixtures are stable and deterministic",
+      "command": "pnpm --filter @speed-reader/tokenizer exec vitest run src/harness.eval.test.ts",
+      "owner": "tokenizer_eval",
+      "gating": "required"
+    },
+    {
+      "id": "engine_eval",
+      "description": "RSVP engine fixture-driven state/timing transitions stay deterministic",
+      "command": "pnpm --filter @speed-reader/engine exec vitest run src/harness.eval.test.ts",
+      "owner": "engine_eval",
+      "gating": "required"
+    },
+    {
+      "id": "backend_contract_eval",
+      "description": "Backend handler response contracts and title generation remain stable",
+      "command": "cd backend && go test ./internal/http -run TestHarnessEval -v",
+      "owner": "backend_contract_eval",
+      "gating": "required"
+    },
+    {
+      "id": "full_quality",
+      "description": "Full lint/type/test suite for broader code health",
+      "command": "pnpm ci:full",
+      "owner": "harness",
+      "gating": "advisory"
+    }
+  ],
+  "playbooks": [
+    "harness/playbooks/test-discovery-failures.md",
+    "harness/playbooks/flaky-timing-tests.md",
+    "harness/playbooks/lint-regressions.md"
+  ]
+}

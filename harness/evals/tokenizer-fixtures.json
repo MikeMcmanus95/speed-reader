@@ -1,0 +1,18 @@
+{
+  "cases": [
+    {
+      "name": "paragraphs_abbreviations_and_pauses",
+      "input": "Hello, world.\n\nDr. Smith is here.",
+      "chunkSize": 3,
+      "expectedTokens": [
+        {"text":"Hello,","pivot":2,"isSentenceEnd":false,"isParagraphEnd":false,"pauseMultiplier":1.3,"sentenceIndex":0,"paragraphIndex":0},
+        {"text":"world.","pivot":2,"isSentenceEnd":true,"isParagraphEnd":true,"pauseMultiplier":2.2,"sentenceIndex":0,"paragraphIndex":0},
+        {"text":"Dr.","pivot":1,"isSentenceEnd":false,"isParagraphEnd":false,"pauseMultiplier":1,"sentenceIndex":1,"paragraphIndex":1},
+        {"text":"Smith","pivot":2,"isSentenceEnd":false,"isParagraphEnd":false,"pauseMultiplier":1,"sentenceIndex":1,"paragraphIndex":1},
+        {"text":"is","pivot":1,"isSentenceEnd":false,"isParagraphEnd":false,"pauseMultiplier":1,"sentenceIndex":1,"paragraphIndex":1},
+        {"text":"here.","pivot":2,"isSentenceEnd":true,"isParagraphEnd":true,"pauseMultiplier":2.2,"sentenceIndex":1,"paragraphIndex":1}
+      ],
+      "expectedChunkLengths": [3, 3]
+    }
+  ]
+}

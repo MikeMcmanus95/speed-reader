@@ -17,6 +17,8 @@ dist/
 build/
 *.local
 .turbo/
+.cache/
+harness/artifacts/
 
 # Apps
 apps/*/dist/

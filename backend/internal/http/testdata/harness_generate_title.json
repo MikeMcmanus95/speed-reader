@@ -1,0 +1,22 @@
+{
+  "cases": [
+    {
+      "name": "empty_content_defaults",
+      "content": "",
+      "maxWords": 6,
+      "expected": "Untitled Document"
+    },
+    {
+      "name": "truncates_to_max_words",
+      "content": "one two three four five six seven",
+      "maxWords": 6,
+      "expected": "one two three four five six..."
+    },
+    {
+      "name": "single_sentence_short",
+      "content": "hello world",
+      "maxWords": 6,
+      "expected": "hello world"
+    }
+  ]
+}
