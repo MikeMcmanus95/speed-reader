@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "pnpm --filter @speed-reader/types build && pnpm --filter @speed-reader/tokenizer build && pnpm --filter @speed-reader/engine build && pnpm --filter @speed-reader/api-client build && pnpm --filter @speed-reader/ui build",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
