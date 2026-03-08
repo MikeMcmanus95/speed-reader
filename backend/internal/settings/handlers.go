@@ -2,8 +2,8 @@ package settings
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/mikepersonal/speed-reader/backend/internal/auth"
 	"github.com/mikepersonal/speed-reader/backend/internal/logging"
@@ -43,6 +43,19 @@ func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, ErrorResponse{Error: message})
 }
 
+func mapSettingsError(err error, internalMessage string) (status int, message string) {
+	if errors.Is(err, ErrUserNotFound) {
+		return http.StatusNotFound, "user not found"
+	}
+
+	var validationErr *ValidationError
+	if errors.As(err, &validationErr) {
+		return http.StatusBadRequest, validationErr.Error()
+	}
+
+	return http.StatusInternalServerError, internalMessage
+}
+
 // GetSettings handles GET /api/settings
 func (h *Handlers) GetSettings(w http.ResponseWriter, r *http.Request) {
 	we := logging.WideEventFromContext(r.Context())
@@ -62,11 +75,8 @@ func (h *Handlers) GetSettings(w http.ResponseWriter, r *http.Request) {
 		if we != nil {
 			we.AddError(err)
 		}
-		if strings.Contains(err.Error(), "not found") {
-			writeError(w, http.StatusNotFound, "user not found")
-			return
-		}
-		writeError(w, http.StatusInternalServerError, "failed to get settings")
+		status, message := mapSettingsError(err, "failed to get settings")
+		writeError(w, status, message)
 		return
 	}
 
@@ -120,16 +130,8 @@ func (h *Handlers) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		if we != nil {
 			we.AddError(err)
 		}
-		// Check if it's a validation error
-		if strings.Contains(err.Error(), "must be") {
-			writeError(w, http.StatusBadRequest, err.Error())
-			return
-		}
-		if strings.Contains(err.Error(), "not found") {
-			writeError(w, http.StatusNotFound, "user not found")
-			return
-		}
-		writeError(w, http.StatusInternalServerError, "failed to update settings")
+		status, message := mapSettingsError(err, "failed to update settings")
+		writeError(w, status, message)
 		return
 	}
 
