@@ -26,6 +26,15 @@ import (
 	"github.com/mikepersonal/speed-reader/backend/internal/telemetry"
 )
 
+const (
+	serverReadHeaderTimeout = 5 * time.Second
+	serverReadTimeout       = 15 * time.Second
+	serverWriteTimeout      = 30 * time.Second
+	serverIdleTimeout       = 60 * time.Second
+	serverMaxHeaderBytes    = 1 << 20 // 1 MiB
+	serverShutdownTimeout   = 30 * time.Second
+)
+
 func main() {
 	ctx := context.Background()
 
@@ -152,8 +161,13 @@ func main() {
 	// Start server in goroutine
 	addr := fmt.Sprintf(":%s", cfg.Port)
 	server := &http.Server{
-		Addr:    addr,
-		Handler: router,
+		Addr:              addr,
+		Handler:           router,
+		ReadHeaderTimeout: serverReadHeaderTimeout,
+		ReadTimeout:       serverReadTimeout,
+		WriteTimeout:      serverWriteTimeout,
+		IdleTimeout:       serverIdleTimeout,
+		MaxHeaderBytes:    serverMaxHeaderBytes,
 	}
 
 	go func() {
@@ -169,7 +183,7 @@ func main() {
 	logger.Info("shutting down...")
 
 	// Graceful shutdown with timeout
-	shutdownCtx, cancel := context.WithTimeout(ctx, 30*1000*1000*1000) // 30 seconds
+	shutdownCtx, cancel := context.WithTimeout(ctx, serverShutdownTimeout)
 	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
