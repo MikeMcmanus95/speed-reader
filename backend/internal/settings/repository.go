@@ -27,7 +27,7 @@ func (r *Repository) GetByUserID(ctx context.Context, userID uuid.UUID) (*Settin
 	err := r.db.QueryRowContext(ctx, query, userID).Scan(&settingsJSON)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("user not found")
+			return nil, ErrUserNotFound
 		}
 		return nil, fmt.Errorf("failed to get settings: %w", err)
 	}
@@ -64,7 +64,7 @@ func (r *Repository) Update(ctx context.Context, userID uuid.UUID, settings *Set
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if rows == 0 {
-		return fmt.Errorf("user not found")
+		return ErrUserNotFound
 	}
 
 	return nil

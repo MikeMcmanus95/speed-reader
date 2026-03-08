@@ -174,7 +174,7 @@ function SettingsView() {
             Settings
           </h1>
           <p className="text-text-secondary mb-8">
-            Customize your reading experience. These settings apply as defaults for new documents.
+            Customize your reading experience. Font size updates the active reader immediately, while the other values are defaults for new documents.
           </p>
 
           <div className="space-y-8">

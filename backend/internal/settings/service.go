@@ -2,7 +2,6 @@ package settings
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 )
@@ -59,32 +58,30 @@ func (s *Service) UpdateSettings(ctx context.Context, userID uuid.UUID, update *
 func (s *Service) validateUpdate(update *UpdateSettingsRequest) error {
 	if update.DefaultWPM != nil {
 		if *update.DefaultWPM < 50 || *update.DefaultWPM > 1000 {
-			return fmt.Errorf("defaultWpm must be between 50 and 1000")
+			return newValidationError("defaultWpm must be between 50 and 1000")
 		}
 	}
 
 	if update.DefaultChunkSize != nil {
 		if *update.DefaultChunkSize < 1 || *update.DefaultChunkSize > 10 {
-			return fmt.Errorf("defaultChunkSize must be between 1 and 10")
+			return newValidationError("defaultChunkSize must be between 1 and 10")
 		}
 	}
 
 	if update.PauseMultipliers != nil {
-		// PauseMultipliers must have all three fields with valid ranges when provided
-		// Values of 0.0 are considered missing/unset
-		if update.PauseMultipliers.Comma != 0 {
-			if update.PauseMultipliers.Comma < 1.0 || update.PauseMultipliers.Comma > 5.0 {
-				return fmt.Errorf("pauseMultipliers.comma must be between 1.0 and 5.0")
+		if update.PauseMultipliers.Comma != nil {
+			if *update.PauseMultipliers.Comma < 1.0 || *update.PauseMultipliers.Comma > 5.0 {
+				return newValidationError("pauseMultipliers.comma must be between 1.0 and 5.0")
 			}
 		}
-		if update.PauseMultipliers.Sentence != 0 {
-			if update.PauseMultipliers.Sentence < 1.0 || update.PauseMultipliers.Sentence > 5.0 {
-				return fmt.Errorf("pauseMultipliers.sentence must be between 1.0 and 5.0")
+		if update.PauseMultipliers.Sentence != nil {
+			if *update.PauseMultipliers.Sentence < 1.0 || *update.PauseMultipliers.Sentence > 5.0 {
+				return newValidationError("pauseMultipliers.sentence must be between 1.0 and 5.0")
 			}
 		}
-		if update.PauseMultipliers.Paragraph != 0 {
-			if update.PauseMultipliers.Paragraph < 1.0 || update.PauseMultipliers.Paragraph > 5.0 {
-				return fmt.Errorf("pauseMultipliers.paragraph must be between 1.0 and 5.0")
+		if update.PauseMultipliers.Paragraph != nil {
+			if *update.PauseMultipliers.Paragraph < 1.0 || *update.PauseMultipliers.Paragraph > 5.0 {
+				return newValidationError("pauseMultipliers.paragraph must be between 1.0 and 5.0")
 			}
 		}
 	}
@@ -94,7 +91,7 @@ func (s *Service) validateUpdate(update *UpdateSettingsRequest) error {
 		case FontSizeSmall, FontSizeMedium, FontSizeLarge:
 			// Valid
 		default:
-			return fmt.Errorf("fontSize must be 'small', 'medium', or 'large'")
+			return newValidationError("fontSize must be 'small', 'medium', or 'large'")
 		}
 	}
 
