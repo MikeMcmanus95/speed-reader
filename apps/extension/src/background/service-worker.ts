@@ -3,6 +3,9 @@
 import { tokenize, chunkTokens } from '@speed-reader/tokenizer';
 import { saveDocument, saveChunks, type LocalDocument } from '../storage/db';
 
+// Maximum text payload size (1MB)
+const MAX_TEXT_SIZE = 1024 * 1024;
+
 // Install event: Setup context menus
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Speed Reader extension installed');
@@ -24,28 +27,101 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  void handleContextMenuClick(info, tab);
+});
+
+async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) {
   if (!tab?.id || !tab?.windowId) return;
 
   if (info.menuItemId === 'speed-read-selection' && info.selectionText) {
     // Open side panel immediately (must be synchronous for user gesture)
-    chrome.sidePanel.open({ windowId: tab.windowId });
+    void chrome.sidePanel.open({ windowId: tab.windowId });
+    const selectionText = sanitizeText(info.selectionText);
+    if (!selectionText) return;
     // Then process text asynchronously with autoPlay enabled
-    handleTextSelection(info.selectionText, tab.url || 'Unknown', true);
+    await handleTextSelection(selectionText, tab.url || 'Unknown', true);
   } else if (info.menuItemId === 'speed-read-page') {
     // Open side panel immediately
-    chrome.sidePanel.open({ windowId: tab.windowId });
-    // Request full page text from content script
-    chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_TEXT' }, (response) => {
-      if (chrome.runtime.lastError) {
-        console.warn('Failed to get page text:', chrome.runtime.lastError.message);
-        return;
-      }
-      if (response?.text) {
-        handleTextSelection(response.text, tab.url || 'Unknown', true);
-      }
-    });
+    void chrome.sidePanel.open({ windowId: tab.windowId });
+    // Extract full page text on demand in the active tab
+    const pageText = await extractPageTextFromTab(tab.id);
+    if (!pageText) {
+      console.warn('Failed to get page text: empty result or script injection unavailable');
+      return;
+    }
+    await handleTextSelection(pageText, tab.url || 'Unknown', true);
   }
-});
+}
+
+function sanitizeText(text: string): string {
+  return text
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .substring(0, MAX_TEXT_SIZE);
+}
+
+async function extractSelectionFromTab(tabId: number): Promise<string | null> {
+  return executeTextScript(tabId, () => window.getSelection()?.toString() || '');
+}
+
+async function extractPageTextFromTab(tabId: number): Promise<string | null> {
+  return executeTextScript(tabId, () => {
+    const sanitize = (text: string) => text.replace(/\s+/g, ' ').trim();
+    const selectors = [
+      'main',
+      '[role="main"]',
+      '.post-content',
+      '.article-content',
+      '.entry-content',
+      '#content',
+    ];
+
+    const article = document.querySelector('article');
+    if (article && article instanceof HTMLElement) {
+      return sanitize(article.innerText);
+    }
+
+    for (const selector of selectors) {
+      const element = document.querySelector(selector);
+      if (element && element instanceof HTMLElement) {
+        return sanitize(element.innerText);
+      }
+    }
+
+    return sanitize(document.body?.innerText || '');
+  });
+}
+
+async function executeTextScript(
+  tabId: number,
+  func: () => string
+): Promise<string | null> {
+  return new Promise((resolve) => {
+    chrome.scripting.executeScript(
+      {
+        target: { tabId },
+        func,
+      },
+      (results) => {
+        if (chrome.runtime.lastError) {
+          console.warn('Failed to run text extraction script:', chrome.runtime.lastError.message);
+          resolve(null);
+          return;
+        }
+
+        const firstResult = results?.[0]?.result;
+        if (typeof firstResult !== 'string') {
+          resolve(null);
+          return;
+        }
+
+        const sanitized = sanitizeText(firstResult);
+        resolve(sanitized || null);
+      }
+    );
+  });
+}
 
 // Handle text selection and create document
 async function handleTextSelection(text: string, source: string, autoPlay: boolean = false) {
@@ -108,25 +184,26 @@ function extractTitle(text: string): string {
 }
 
 // Handle keyboard shortcuts
-chrome.commands.onCommand.addListener(async (command) => {
+chrome.commands.onCommand.addListener((command) => {
+  void handleCommand(command);
+});
+
+async function handleCommand(command: string) {
   if (command === 'speed_read_selection') {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab?.id && tab.windowId) {
       // Open side panel immediately (user gesture from keyboard shortcut)
-      chrome.sidePanel.open({ windowId: tab.windowId });
+      void chrome.sidePanel.open({ windowId: tab.windowId });
       // Then get selection and process with autoPlay enabled
-      chrome.tabs.sendMessage(tab.id, { type: 'GET_SELECTION' }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.warn('Failed to get selection:', chrome.runtime.lastError.message);
-          return;
-        }
-        if (response?.text) {
-          handleTextSelection(response.text, tab.url || 'Unknown', true);
-        }
-      });
+      const selectionText = await extractSelectionFromTab(tab.id);
+      if (!selectionText) {
+        console.warn('Failed to get selection: empty result or script injection unavailable');
+        return;
+      }
+      await handleTextSelection(selectionText, tab.url || 'Unknown', true);
     }
   }
-});
+}
 
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {

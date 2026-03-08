@@ -1,0 +1,70 @@
+{
+  "generatedAt": "2026-03-08T00:54:57.071Z",
+  "extensionId": "hlpicnmdinkabjalmhclphdbomhnindk",
+  "documents": {
+    "afterSelection": [
+      {
+        "id": "a7a9aa1c-5960-4d39-a51b-ab5b8405ea60",
+        "title": "Automation selected text for SPE-9 validation.",
+        "source": "Unknown",
+        "tokenCount": 6,
+        "chunkCount": 1,
+        "createdAt": 1772931294229,
+        "syncStatus": "local"
+      }
+    ],
+    "afterPage": [
+      {
+        "id": "a7a9aa1c-5960-4d39-a51b-ab5b8405ea60",
+        "title": "Automation selected text for SPE-9 validation.",
+        "source": "Unknown",
+        "tokenCount": 6,
+        "chunkCount": 1,
+        "createdAt": 1772931294229,
+        "syncStatus": "local"
+      },
+      {
+        "id": "0bd3a26c-6af3-4877-8800-1eb107d425b9",
+        "title": "Mocked full-page text from runtime validation p...",
+        "source": "Unknown",
+        "tokenCount": 7,
+        "chunkCount": 1,
+        "createdAt": 1772931294253,
+        "syncStatus": "local"
+      }
+    ],
+    "afterManual": [
+      {
+        "id": "a7a9aa1c-5960-4d39-a51b-ab5b8405ea60",
+        "title": "Automation selected text for SPE-9 validation.",
+        "source": "Unknown",
+        "tokenCount": 6,
+        "chunkCount": 1,
+        "createdAt": 1772931294229,
+        "syncStatus": "local"
+      },
+      {
+        "id": "0bd3a26c-6af3-4877-8800-1eb107d425b9",
+        "title": "Mocked full-page text from runtime validation p...",
+        "source": "Unknown",
+        "tokenCount": 7,
+        "chunkCount": 1,
+        "createdAt": 1772931294253,
+        "syncStatus": "local"
+      },
+      {
+        "id": "8ecfd8ed-e96d-421f-9147-d740df584b97",
+        "title": "Manual sidepanel validation doc",
+        "source": "manual",
+        "tokenCount": 17,
+        "chunkCount": 1,
+        "createdAt": 1772931296546,
+        "syncStatus": "local"
+      }
+    ]
+  },
+  "screenshots": {
+    "contextMenuHandoff": "docs/pr-media/SPE-9/context-menu-handoff.png",
+    "sidepanelManualIngest": "docs/pr-media/SPE-9/sidepanel-manual-ingest.png"
+  }
+}
