@@ -17,7 +17,7 @@ chrome.runtime.onInstalled.addListener(() => {
   // Create context menu for entire page
   chrome.contextMenus.create({
     id: 'speed-read-page',
-    title: 'Speed Read Entire Page',
+    title: 'Speed Read entire page',
     contexts: ['page'],
   });
 });
@@ -41,18 +41,32 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         return;
       }
       if (response?.text) {
-        handleTextSelection(response.text, tab.url || 'Unknown', true);
+        handleTextSelection(
+          response.text,
+          response.source || tab.url || 'Unknown',
+          true,
+          response.title
+        );
       }
     });
   }
 });
 
 // Handle text selection and create document
-async function handleTextSelection(text: string, source: string, autoPlay: boolean = false) {
+async function handleTextSelection(
+  text: string,
+  source: string,
+  autoPlay: boolean = false,
+  preferredTitle?: string
+) {
   try {
+    const normalizedText = text.trim();
+    if (!normalizedText) return;
+
     // Tokenize the text
-    const tokens = tokenize(text);
+    const tokens = tokenize(normalizedText);
     const chunks = chunkTokens(tokens);
+    if (tokens.length === 0) return;
 
     // Generate document ID
     const docId = crypto.randomUUID();
@@ -65,9 +79,9 @@ async function handleTextSelection(text: string, source: string, autoPlay: boole
     // Create document object
     const doc: LocalDocument = {
       id: docId,
-      title: extractTitle(text),
+      title: resolveTitle(preferredTitle, normalizedText),
       source,
-      content: text, // Store raw content for syncing
+      content: normalizedText, // Store raw content for syncing
       createdAt: now,
       updatedAt: now,
       tokenCount: tokens.length,
@@ -102,9 +116,19 @@ async function handleTextSelection(text: string, source: string, autoPlay: boole
 
 // Extract a title from the first line of text
 function extractTitle(text: string): string {
-  const firstLine = text.split('\n')[0].trim();
+  const firstLine = text.split('\n').find(line => line.trim().length > 0)?.trim() || '';
+  if (!firstLine) return 'Untitled Document';
   if (firstLine.length <= 50) return firstLine;
-  return firstLine.substring(0, 47) + '...';
+  return `${firstLine.substring(0, 47)}...`;
+}
+
+function resolveTitle(preferredTitle: string | undefined, text: string): string {
+  const cleanedPreferred = preferredTitle?.trim();
+  if (cleanedPreferred) {
+    if (cleanedPreferred.length <= 80) return cleanedPreferred;
+    return `${cleanedPreferred.substring(0, 77)}...`;
+  }
+  return extractTitle(text);
 }
 
 // Handle keyboard shortcuts
