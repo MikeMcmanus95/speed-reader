@@ -52,6 +52,7 @@ coverage.html
 
 # Data storage
 data/
+docs/
 
 # Logs
 *.log
