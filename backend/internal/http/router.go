@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -57,8 +58,24 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 
 	// API routes
 	r.Route("/api", func(r chi.Router) {
+		r.Use(IPRateLimit(RateLimitConfig{
+			RequestsPerMinute: 240,
+			Burst:             80,
+			MaxEntries:        20000,
+			EntryTTL:          10 * time.Minute,
+			SweepInterval:     time.Minute,
+		}))
+
 		// Auth routes (no auth required for most)
 		r.Route("/auth", func(r chi.Router) {
+			r.Use(IPRateLimit(RateLimitConfig{
+				RequestsPerMinute: 60,
+				Burst:             20,
+				MaxEntries:        10000,
+				EntryTTL:          10 * time.Minute,
+				SweepInterval:     time.Minute,
+			}))
+
 			// Guest endpoint removed - unauthenticated users use local storage
 			r.Get("/google", authHandlers.GoogleLogin)
 			r.Get("/google/callback", authHandlers.GoogleCallback)
@@ -81,6 +98,13 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 		r.Route("/documents", func(r chi.Router) {
 			r.Use(auth.RequireAuth(deps.AuthService))
 			r.Use(auth.ValidateCSRF(deps.AuthService))
+			r.Use(ActorRateLimit(RateLimitConfig{
+				RequestsPerMinute: 120,
+				Burst:             40,
+				MaxEntries:        20000,
+				EntryTTL:          10 * time.Minute,
+				SweepInterval:     time.Minute,
+			}))
 			r.Use(RequireJSONContentType)
 			r.Use(ContextAwareMaxBodySize) // Apply body size limit after auth so we know user type
 
@@ -103,6 +127,14 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 
 		// Shared document route (no auth required)
 		r.Route("/shared", func(r chi.Router) {
+			r.Use(IPRateLimit(RateLimitConfig{
+				RequestsPerMinute: 90,
+				Burst:             30,
+				MaxEntries:        10000,
+				EntryTTL:          10 * time.Minute,
+				SweepInterval:     time.Minute,
+			}))
+
 			r.Get("/{token}", docHandlers.GetSharedDocument)
 			r.Get("/{token}/tokens", docHandlers.GetSharedDocumentTokens)
 		})
@@ -111,6 +143,13 @@ func NewRouter(deps *RouterDeps) *chi.Mux {
 		r.Route("/settings", func(r chi.Router) {
 			r.Use(auth.RequireAuth(deps.AuthService))
 			r.Use(auth.ValidateCSRF(deps.AuthService))
+			r.Use(ActorRateLimit(RateLimitConfig{
+				RequestsPerMinute: 60,
+				Burst:             20,
+				MaxEntries:        20000,
+				EntryTTL:          10 * time.Minute,
+				SweepInterval:     time.Minute,
+			}))
 			r.Get("/", settingsHandlers.GetSettings)
 			r.Put("/", settingsHandlers.UpdateSettings)
 		})
