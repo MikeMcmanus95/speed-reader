@@ -26,7 +26,7 @@ The package command generates `apps/extension/dist/speed-reader-rsvp-v<version>.
 | Privacy tab must declare single purpose, minimum-permission justifications, remote-code declaration, and data-use disclosures | https://developer.chrome.com/docs/webstore/cws-dashboard-privacy | Gap (dashboard) | Must be completed in dashboard for this item before review submission. |
 | Privacy disclosures must match extension behavior and privacy policy URL | https://developer.chrome.com/docs/webstore/program-policies/listing-requirements and https://developer.chrome.com/docs/webstore/cws-dashboard-privacy | Gap (policy + dashboard) | Public privacy policy URL and matching disclosures are required prior to submission. |
 | MV3 policy: extension logic must be self-contained, no remotely hosted executable code | https://developer.chrome.com/docs/webstore/program-policies/mv3-requirements | Met (repo) | Extension code is bundled locally; sidepanel no longer references external Google Fonts URLs. |
-| Request only permissions needed for single purpose; broad permissions can increase review time | https://developer.chrome.com/docs/extensions/develop/concepts/permission-warnings and https://developer.chrome.com/docs/webstore/review-process | Risk acknowledged | Extension currently uses `<all_urls>` plus API permissions; justifications must be explicit in privacy fields. |
+| Request only permissions needed for single purpose; broad permissions can increase review time | https://developer.chrome.com/docs/extensions/develop/concepts/permission-warnings and https://developer.chrome.com/docs/webstore/review-process | Met (repo) | Manifest now uses user-gesture-scoped `activeTab` + `scripting` extraction and avoids always-on host permissions. |
 | Must provide real, non-broken functionality with user value | https://developer.chrome.com/docs/webstore/program-policies/minimum-functionality | Validation gate | Runtime flow validation is required before final submission package handoff. |
 
 ## Permission Justification Draft (for Privacy Tab)
@@ -35,8 +35,9 @@ The package command generates `apps/extension/dist/speed-reader-rsvp-v<version>.
 - `contextMenus`: Add right-click actions for selected text and full-page ingest.
 - `storage`: Persist local reading/auth state and pending document handoff.
 - `identity`: Support extension auth flow via `chrome.identity.launchWebAuthFlow`.
-- `host_permissions: <all_urls>`: Allow ingest of selected/full-page text on the
-  active site where the user triggers extension actions.
+- `activeTab`: Grant temporary host access only after explicit user actions.
+- `scripting`: Run on-demand text extraction in the active tab after user
+  triggers, without persistent content script injection.
 
 ## Data Handling Disclosure Draft Inputs
 
