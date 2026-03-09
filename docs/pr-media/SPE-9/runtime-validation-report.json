@@ -1,0 +1,70 @@
+{
+  "generatedAt": "2026-03-08T05:17:17.490Z",
+  "extensionId": "hlpicnmdinkabjalmhclphdbomhnindk",
+  "documents": {
+    "afterSelection": [
+      {
+        "id": "1af7e4cd-6374-4560-8461-09e8714fd40c",
+        "title": "Automation selected text for SPE-9 validation.",
+        "source": "Unknown",
+        "tokenCount": 6,
+        "chunkCount": 1,
+        "createdAt": 1772947035094,
+        "syncStatus": "local"
+      }
+    ],
+    "afterPage": [
+      {
+        "id": "1af7e4cd-6374-4560-8461-09e8714fd40c",
+        "title": "Automation selected text for SPE-9 validation.",
+        "source": "Unknown",
+        "tokenCount": 6,
+        "chunkCount": 1,
+        "createdAt": 1772947035094,
+        "syncStatus": "local"
+      },
+      {
+        "id": "b314e4eb-aa38-475c-9f0f-5ce20b498e3f",
+        "title": "Mocked full-page text from runtime validation p...",
+        "source": "Unknown",
+        "tokenCount": 7,
+        "chunkCount": 1,
+        "createdAt": 1772947035131,
+        "syncStatus": "local"
+      }
+    ],
+    "afterManual": [
+      {
+        "id": "1af7e4cd-6374-4560-8461-09e8714fd40c",
+        "title": "Automation selected text for SPE-9 validation.",
+        "source": "Unknown",
+        "tokenCount": 6,
+        "chunkCount": 1,
+        "createdAt": 1772947035094,
+        "syncStatus": "local"
+      },
+      {
+        "id": "b314e4eb-aa38-475c-9f0f-5ce20b498e3f",
+        "title": "Mocked full-page text from runtime validation p...",
+        "source": "Unknown",
+        "tokenCount": 7,
+        "chunkCount": 1,
+        "createdAt": 1772947035131,
+        "syncStatus": "local"
+      },
+      {
+        "id": "d647d723-ecec-4db7-b3c0-82188fa16c9f",
+        "title": "Manual sidepanel validation doc",
+        "source": "manual",
+        "tokenCount": 17,
+        "chunkCount": 1,
+        "createdAt": 1772947037406,
+        "syncStatus": "local"
+      }
+    ]
+  },
+  "screenshots": {
+    "contextMenuHandoff": "output/playwright/spe-9/screenshots/context-menu-handoff.png",
+    "sidepanelManualIngest": "output/playwright/spe-9/screenshots/sidepanel-manual-ingest.png"
+  }
+}
